@@ -83,10 +83,6 @@
             50% { transform: scale(1.2); opacity: 1; }
             100% { transform: scale(1); opacity: 1; }
         }
-        .awakened-skill {
-            color: #00ffff;
-            text-shadow: 0 0 5px #008888;
-        }
     </style>
 </head>
 <body class="flex items-center justify-center">
@@ -129,7 +125,7 @@
         <div id="battle-screen" class="hidden h-full flex flex-col relative overflow-hidden">
             <div id="flash-overlay" class="absolute inset-0 z-50 pointer-events-none"></div>
 
-            <!-- カットインレイヤー -->
+            <!-- Cut-in Layer -->
             <div id="cutin-layer" class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center opacity-0 transition-opacity duration-300">
                 <div id="cutin-banner" class="w-[150%] h-24 bg-gradient-to-r from-transparent via-white/20 to-transparent border-y-4 border-white flex items-center justify-center">
                     <span id="cutin-text" class="text-4xl font-black italic tracking-tighter text-glow"></span>
@@ -196,11 +192,11 @@
                             <span id="stat-hero" class="text-white font-bold"></span>
                         </div>
                         <div class="flex justify-between border-b border-gray-800 py-1">
-                            <span class="text-gray-400">与えた総ダメージ:</span>
+                            <span class="text-gray-400">総与ダメ:</span>
                             <span id="stat-dmg-dealt" class="text-red-400 font-bold"></span>
                         </div>
                         <div class="flex justify-between border-b border-gray-800 py-1">
-                            <span class="text-gray-400">受けた総ダメージ:</span>
+                            <span class="text-gray-400">総被ダメ:</span>
                             <span id="stat-dmg-taken" class="text-orange-400 font-bold"></span>
                         </div>
                         <div class="flex justify-between border-b border-gray-800 py-1">
@@ -229,142 +225,45 @@
 
     <script>
         (function() {
-            // --- Sound Engine ---
+            // Audio Helper
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             function playSE(type) {
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 const now = audioCtx.currentTime;
-
                 const createGrumble = (freq, duration, gainVal) => {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    const lfo = audioCtx.createOscillator();
-                    const lfoGain = audioCtx.createGain();
-
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(freq, now);
-                    osc.frequency.exponentialRampToValueAtTime(freq / 2.5, now + duration);
-
-                    lfo.type = 'sine';
-                    lfo.frequency.setValueAtTime(15, now); 
-                    lfoGain.gain.setValueAtTime(freq * 0.2, now);
-                    
-                    lfo.connect(lfoGain);
-                    lfoGain.connect(osc.frequency);
-                    osc.connect(gain);
-                    gain.connect(audioCtx.destination);
-
-                    gain.gain.setValueAtTime(0, now);
-                    gain.gain.linearRampToValueAtTime(gainVal, now + 0.1);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-                    lfo.start(now);
-                    osc.start(now);
-                    lfo.stop(now + duration);
-                    osc.stop(now + duration);
+                    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); const lfo = audioCtx.createOscillator(); const lfoGain = audioCtx.createGain();
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, now); osc.frequency.exponentialRampToValueAtTime(freq / 2.5, now + duration);
+                    lfo.type = 'sine'; lfo.frequency.setValueAtTime(15, now); lfoGain.gain.setValueAtTime(freq * 0.2, now);
+                    lfo.connect(lfoGain); lfoGain.connect(osc.frequency); osc.connect(gain); gain.connect(audioCtx.destination);
+                    gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(gainVal, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                    lfo.start(now); osc.start(now); lfo.stop(now + duration); osc.stop(now + duration);
                 };
-
                 switch(type) {
-                    case 'attack': {
-                        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                        osc.type = 'square'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(110, now + 0.1);
-                        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.1); break;
-                    }
-                    case 'hit': {
-                        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now); osc.frequency.linearRampToValueAtTime(50, now + 0.1);
-                        gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.1); break;
-                    }
-                    case 'critical': {
-                        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(110, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
-                        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now + 0.15);
-                        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.15); break;
-                    }
-                    case 'bad_hit': {
-                        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(60, now); osc.frequency.linearRampToValueAtTime(40, now + 0.2);
-                        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
-                        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.2); break;
-                    }
-                    case 'heal': {
-                        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                        osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
-                        gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
-                        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.3); break;
-                    }
-                    case 'dice': {
-                        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                        osc.type = 'triangle'; osc.frequency.setValueAtTime(880, now); gain.gain.setValueAtTime(0.05, now);
-                        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.05); break;
-                    }
-                    case 'skill': {
-                        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                        osc.type = 'square'; osc.frequency.setValueAtTime(110, now); osc.frequency.exponentialRampToValueAtTime(660, now + 0.4);
-                        gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.4); break;
-                    }
+                    case 'attack': { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(110, now + 0.1); gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.1); break; }
+                    case 'hit': { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now); osc.frequency.linearRampToValueAtTime(50, now + 0.1); gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.1); break; }
+                    case 'critical': { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(110, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.15); gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now + 0.15); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.15); break; }
+                    case 'heal': { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.3); gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.3); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.3); break; }
+                    case 'dice': { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(880, now); gain.gain.setValueAtTime(0.05, now); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.05); break; }
+                    case 'skill': { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(110, now); osc.frequency.exponentialRampToValueAtTime(660, now + 0.4); gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 0.4); break; }
                     case 'cutin': [880, 1100, 1320].forEach((f, i) => { const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type = 'sine'; o.connect(g); g.connect(audioCtx.destination); o.frequency.setValueAtTime(f, now + i * 0.05); g.gain.setValueAtTime(0.1, now + i * 0.05); g.gain.linearRampToValueAtTime(0, now + i * 0.05 + 0.5); o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.5); }); break;
                     case 'victory': [440, 554, 659].forEach((f, i) => { const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type = 'square'; o.connect(g); g.connect(audioCtx.destination); o.frequency.setValueAtTime(f, now + i * 0.1); g.gain.setValueAtTime(0.05, now + i * 0.1); g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.4); o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.4); }); break;
                     case 'evolve': { createGrumble(80, 2.0, 0.4); createGrumble(60, 2.5, 0.3); break; }
-                    case 'dark_roar': { createGrumble(55, 1.5, 0.5); createGrumble(73, 1.2, 0.4); createGrumble(38, 1.8, 0.3); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(40, now + 1.5); gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(now + 1.5); break; }
+                    case 'dark_roar': { createGrumble(55, 1.5, 0.5); createGrumble(73, 1.2, 0.4); createGrumble(38, 1.8, 0.3); break; }
                 }
             }
 
             const CHARACTERS = {
-                ayumu: { 
-                    name: 'アユム', job: '勇者', icon: '⚔️', maxHp: 400, atk: 30, maxMp: 5, 
-                    skills: [
-                        { name: '必殺の一撃', desc: '弱っている敵に777 / 通常は大ダメージ' },
-                        { name: 'ためる', desc: '次の物理攻撃が3倍' },
-                        { name: '希望の一振り', desc: '会心の一撃 + 敵最大HPの10%加算' },
-                        { name: '失敗', desc: '何もおきない' },
-                        { name: 'ミラクルソード', desc: '通常ダメージ + 与えた分回復' },
-                        { name: 'ミラクルソード改', desc: '必中会心ダメージ + 与えた分回復' }
-                    ] 
-                },
-                hikaru: { 
-                    name: 'ヒカル', job: '忍者', icon: '🥷', maxHp: 280, atk: 45, maxMp: 5, 
-                    skills: [
-                        { name: '失敗', desc: '何もおきない' },
-                        { name: 'ためる', desc: '次の攻撃が3倍' },
-                        { name: '毒矢', desc: '成功率80%:敵を毒状態にする' },
-                        { name: '手裏剣', desc: '威力35%×5回連続攻撃' },
-                        { name: '手裏剣', desc: '威力35%×5回連続攻撃' },
-                        { name: '毒矢', desc: '成功率80%:敵を毒状態にする' }
-                    ] 
-                },
-                shunsuke: { 
-                    name: 'シュンスケ', job: '戦士', icon: '🛡️', maxHp: 520, atk: 35, maxMp: 3, 
-                    skills: [
-                        { name: '大地斬', desc: '攻撃力の2.5倍ダメ (スキル反動:HP3%消費)' },
-                        { name: 'ためる', desc: '次の攻撃が3倍 (次回の被ダメ軽減)' },
-                        { name: '超ためる', desc: '永続的に会心率UP (被ダメ軽減)' },
-                        { name: '失敗', desc: '何もおきない (スキル反動:HP3%消費)' },
-                        { name: '死の一振り', desc: '敵HPの70%を削る (スキル反動:HP3%消費)' },
-                        { name: 'こんらん攻撃', desc: 'ダメ+混乱付与 (スキル反動:HP3%消費)' }
-                    ] 
-                },
-                hiiro: { 
-                    name: 'ヒイロ', job: '魔法使い', icon: '🧙', maxHp: 330, atk: 20, maxMp: 10, 
-                    skills: [
-                        { name: 'スターダスト', desc: '固定65ダメージ + 成功率80%で混乱' },
-                        { name: '眠る', desc: 'HP全回復 + 2ターン睡眠' },
-                        { name: '痛み分け', desc: 'お互いの最大HP比率を平均化する' },
-                        { name: 'レインボーアロー', desc: '攻撃力の4.5倍ダメージ + 10～25%回復' },
-                        { name: '失敗', desc: '暴走！ 自分に最大HPの25%ダメージ' },
-                        { name: 'シューティングスター', desc: '割合ダメージ(覚醒で強化) + 睡眠' }
-                    ] 
-                }
+                ayumu: { name: 'アユム', job: '勇者', icon: '⚔️', maxHp: 400, atk: 30, maxMp: 5, skills: [{ name: '必殺の一撃', desc: '弱っている敵に大ダメージ' }, { name: 'ためる', desc: '次の攻撃が3倍' }, { name: '希望の一振り', desc: '会心の一撃 + 最大HP割合ダメ' }, { name: '失敗', desc: '何もおきない' }, { name: 'ミラクルソード', desc: 'ダメージ + 吸収回復' }, { name: 'ミラクルソード改', desc: '必中会心 + 吸収回復' }] },
+                hikaru: { name: 'ヒカル', job: '忍者', icon: '🥷', maxHp: 280, atk: 45, maxMp: 5, skills: [{ name: '失敗', desc: '何もおきない' }, { name: 'ためる', desc: '次の攻撃が3倍' }, { name: '毒矢', desc: '敵を毒状態にする' }, { name: '手裏剣', desc: '威力35%×5回連続攻撃' }, { name: '手裏剣', desc: '威力35%×5回連続攻撃' }, { name: '毒矢', desc: '敵を毒状態にする' }] },
+                shunsuke: { name: 'シュンスケ', job: '戦士', icon: '🛡️', maxHp: 520, atk: 35, maxMp: 3, skills: [{ name: '大地斬', desc: '攻撃力の2.5倍ダメ (反動あり)' }, { name: 'ためる', desc: '次の攻撃が3倍' }, { name: '超ためる', desc: '会心率UP' }, { name: '失敗', desc: '何もおきない (反動あり)' }, { name: '死の一振り', desc: '現在のHPの70%を削る' }, { name: 'こんらん攻撃', desc: 'ダメ+混乱付与' }] },
+                hiiro: { name: 'ヒイロ', job: '魔法使い', icon: '🧙', maxHp: 330, atk: 20, maxMp: 10, skills: [{ name: 'スターダスト', desc: '固定ダメージ + 混乱' }, { name: '眠る', desc: '全回復 + 睡眠状態' }, { name: '痛み分け', desc: 'お互いのHP割合を平均化' }, { name: 'レインボーアロー', desc: '高倍率ダメ + 回復' }, { name: '失敗', desc: '暴走！自分にダメージ' }, { name: 'シューティングスター', desc: '割合ダメージ + 睡眠' }] }
             };
 
             const MONSTERS = [
-                { name: 'スライム', icon: '💧', hp: 80, atk: 18 },
-                { name: 'ゴブリン', icon: '👺', hp: 140, atk: 28 },
-                { name: 'オーク', icon: '🐗', hp: 280, atk: 42 },
-                { name: 'ドラゴン', icon: '🐲', hp: 550, atk: 60, hasEvolved: false }
+                { name: 'スライム', icon: '💧', hp: 120, atk: 18 },
+                { name: 'ゴブリン', icon: '👺', hp: 200, atk: 28 },
+                { name: 'オーク', icon: '🐗', hp: 350, atk: 42 },
+                { name: 'ドラゴン', icon: '🐲', hp: 650, atk: 60, hasEvolved: false }
             ];
 
             let player, enemy, stage = 0, selectedKey = '';
@@ -372,26 +271,16 @@
             let chargeTurns = 0, superCharge = false, isProcessing = false, isAwakened = false;
 
             window.showDetails = function(key) {
-                playSE('dice');
-                selectedKey = key;
-                const c = CHARACTERS[key];
+                playSE('dice'); selectedKey = key; const c = CHARACTERS[key];
                 document.getElementById('char-detail').classList.remove('hidden');
                 document.getElementById('detail-name').innerText = `${c.name} (${c.job})`;
                 document.getElementById('detail-stats').innerText = `HP: ${c.maxHp} / ATK: ${c.atk} / MP: ${c.maxMp}`;
-                const skillList = document.getElementById('detail-skills');
-                skillList.innerHTML = '';
-                c.skills.forEach((s, i) => {
-                    const li = document.createElement('li');
-                    li.className = "border-l-2 border-yellow-700 pl-2 py-0.5 text-left";
-                    li.innerHTML = `<span class="text-yellow-500 font-bold">${i+1}. ${s.name}</span><br><span class="text-gray-400">${s.desc}</span>`;
-                    skillList.appendChild(li);
-                });
+                const skillList = document.getElementById('detail-skills'); skillList.innerHTML = '';
+                c.skills.forEach((s, i) => { const li = document.createElement('li'); li.className = "border-l-2 border-yellow-700 pl-2 py-0.5 text-left"; li.innerHTML = `<span class="text-yellow-500 font-bold">${i+1}. ${s.name}</span>: <span class="text-gray-400 text-[8px]">${s.desc}</span>`; skillList.appendChild(li); });
             };
 
             window.startGame = function() {
-                playSE('victory');
-                if (!selectedKey) return;
-                const base = CHARACTERS[selectedKey];
+                playSE('victory'); if (!selectedKey) return; const base = CHARACTERS[selectedKey];
                 player = { ...base, hp: base.maxHp, mp: base.maxMp, status: [] };
                 gameStats = { heroName: base.name, heroJob: base.job, totalDamageDealt: 0, totalDamageTaken: 0, totalTurns: 0 };
                 document.getElementById('start-screen').classList.add('hidden');
@@ -401,32 +290,20 @@
             };
 
             function initStage() {
-                const m = MONSTERS[stage];
-                enemy = { ...m, maxHp: m.hp, hp: m.hp, status: [] };
-                player.mp = player.maxMp;
-                chargeTurns = 0;
-                isAwakened = false;
-                document.getElementById('player-sprite').classList.remove('awakened');
-                if (player.job !== '戦士') superCharge = false;
-                updateUI();
-                log(`エリア${stage + 1}: ${enemy.name}が現れた！`);
+                const m = MONSTERS[stage]; enemy = { ...m, maxHp: m.hp, hp: m.hp, status: [] }; player.mp = player.maxMp; chargeTurns = 0; isAwakened = false;
+                document.getElementById('player-sprite').classList.remove('awakened'); if (player.job !== '戦士') superCharge = false;
+                updateUI(); log(`エリア${stage + 1}: ${enemy.name}が現れた！`);
             }
 
             function log(msg, color = 'white') {
-                const div = document.createElement('div');
-                div.style.color = color;
-                div.innerText = "> " + msg;
-                const box = document.getElementById('battle-log');
-                box.appendChild(div);
-                box.scrollTop = box.scrollHeight;
+                const div = document.createElement('div'); div.style.color = color; div.innerText = "> " + msg;
+                const box = document.getElementById('battle-log'); box.appendChild(div); box.scrollTop = box.scrollHeight;
             }
 
             function updateUI() {
                 if(!player || !enemy) return;
                 const nameEl = document.getElementById('player-name');
                 nameEl.innerText = `${player.name} (${player.job})${isAwakened ? " (覚醒)" : ""}`;
-                if(isAwakened) nameEl.classList.add('awakened-skill'); else nameEl.classList.remove('awakened-skill');
-                
                 document.getElementById('player-hp-text').innerText = `HP ${Math.ceil(player.hp)}/${player.maxHp}`;
                 document.getElementById('player-hp-bar').style.width = `${(player.hp / player.maxHp) * 100}%`;
                 document.getElementById('player-mp-text').innerText = `MP ${player.mp}/${player.maxMp}`;
@@ -434,204 +311,101 @@
                 document.getElementById('enemy-sprite').innerText = enemy.icon;
                 document.getElementById('enemy-hp-text').innerText = `HP ${Math.ceil(enemy.hp)}/${enemy.maxHp}`;
                 document.getElementById('enemy-hp-bar').style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
-
-                const pStatus = document.getElementById('player-status');
-                pStatus.innerHTML = '';
-                player.status.forEach(s => {
-                    const span = document.createElement('span');
-                    span.className = "px-1 bg-red-900 text-[8px] border border-red-500 rounded text-white";
-                    span.innerText = s.type === 'poison' ? '毒' : s.type === 'confuse' ? '混' : '眠';
-                    pStatus.appendChild(span);
-                });
-
-                const eStatus = document.getElementById('enemy-status');
-                eStatus.innerHTML = '';
-                enemy.status.forEach(s => {
-                    const span = document.createElement('span');
-                    span.className = "px-1 bg-red-900 text-[8px] border border-red-500 rounded text-white";
-                    span.innerText = s.type === 'poison' ? '毒' : s.type === 'confuse' ? '混' : '眠';
-                    eStatus.appendChild(span);
-                });
-
+                const pStatus = document.getElementById('player-status'); pStatus.innerHTML = '';
+                player.status.forEach(s => { const span = document.createElement('span'); span.className = "px-1 bg-red-900 text-[8px] border border-red-500 rounded text-white"; span.innerText = s.type === 'poison' ? '毒' : s.type === 'confuse' ? '混' : '眠'; pStatus.appendChild(span); });
+                const eStatus = document.getElementById('enemy-status'); eStatus.innerHTML = '';
+                enemy.status.forEach(s => { const span = document.createElement('span'); span.className = "px-1 bg-red-900 text-[8px] border border-red-500 rounded text-white"; span.innerText = s.type === 'poison' ? '毒' : s.type === 'confuse' ? '混' : '眠'; eStatus.appendChild(span); });
                 const skillBtn = document.getElementById('skill-btn');
-                if (player.mp < 1) {
-                    skillBtn.classList.add('opacity-50', 'pointer-events-none');
-                } else {
-                    skillBtn.classList.remove('opacity-50', 'pointer-events-none');
-                }
+                if (player.mp < 1) skillBtn.classList.add('opacity-50', 'pointer-events-none'); else skillBtn.classList.remove('opacity-50', 'pointer-events-none');
             }
 
             async function playCutin(skillName, colorClass = 'text-white') {
-                const layer = document.getElementById('cutin-layer');
-                const banner = document.getElementById('cutin-banner');
-                const text = document.getElementById('cutin-text');
-                text.innerText = skillName;
-                text.className = `text-4xl font-black italic tracking-tighter text-glow ${colorClass}`;
-                layer.classList.remove('opacity-0');
-                banner.classList.add('cutin-active');
-                await new Promise(r => setTimeout(r, 1500));
-                banner.classList.remove('cutin-active');
-                layer.classList.add('opacity-0');
+                const layer = document.getElementById('cutin-layer'); const banner = document.getElementById('cutin-banner'); const text = document.getElementById('cutin-text');
+                text.innerText = skillName; text.className = `text-4xl font-black italic tracking-tighter text-glow ${colorClass}`;
+                layer.classList.remove('opacity-0'); banner.classList.add('cutin-active'); await new Promise(r => setTimeout(r, 1500));
+                banner.classList.remove('cutin-active'); layer.classList.add('opacity-0');
             }
 
             async function tryEvolve() {
                 if (enemy.name === 'ドラゴン' && !enemy.hasEvolved) {
-                    isProcessing = true;
-                    playSE('evolve');
-                    log(`ドラゴンを倒した...しかし、周囲が急に暗くなる！`, '#6600cc');
+                    isProcessing = true; playSE('evolve'); log(`ドラゴンを倒した...しかし、周囲の空気が一変する。`, '#6600cc');
                     await new Promise(r => setTimeout(r, 1500));
-                    const flash = document.getElementById('flash-overlay');
-                    flash.classList.add('flash-dark');
-                    setTimeout(() => flash.classList.remove('flash-dark'), 1200);
-
-                    enemy.name = 'アルティメットドラゴン';
-                    enemy.icon = '🔱🐲';
-                    enemy.maxHp = 999;
-                    enemy.hp = 999;
-                    enemy.atk = 85;
-                    enemy.hasEvolved = true;
-                    enemy.status = [];
-                    log(`底知れぬ闇の中から「アルティメットドラゴン」が再誕した！`, '#ff0000');
-                    await new Promise(r => setTimeout(r, 1000));
-
-                    playSE('dark_roar');
-                    await playCutin('深淵の咆哮', 'text-purple-600');
-                    const preDmg = Math.floor(player.maxHp * 0.25);
-                    applyDamage(player, preDmg, false, 'player', true);
-                    log(`激しい咆哮が${player.name}を襲う！ ${preDmg}のダメージ！`, '#ff4400');
-                    
-                    isAwakened = true;
-                    playSE('victory');
-                    player.maxMp += 2;
-                    player.mp = player.maxMp; 
-                    player.atk = Math.floor(player.atk * 1.3);
-                    document.getElementById('player-sprite').classList.add('awakened');
-                    log(`絶望的な闇に抗い、${player.name}の全スキルが覚醒した！！`, '#00ffff');
-                    updateUI();
-                    isProcessing = false;
-                    return true;
+                    const flash = document.getElementById('flash-overlay'); flash.classList.add('flash-dark'); setTimeout(() => flash.classList.remove('flash-dark'), 1200);
+                    enemy.name = '邪龍王アルティメット'; enemy.icon = '🔱🐲'; enemy.maxHp = 999; enemy.hp = 999; enemy.atk = 85; enemy.hasEvolved = true; enemy.status = [];
+                    log(`伝説の邪龍「邪龍王アルティメット」が覚醒した！`, '#ff0000'); await new Promise(r => setTimeout(r, 1000));
+                    playSE('dark_roar'); await playCutin('深淵の咆哮', 'text-purple-600');
+                    const preDmg = Math.floor(player.maxHp * 0.25); applyDamage(player, preDmg, false, 'player', true);
+                    log(`凄まじい波動！ ${player.name}は${preDmg}のダメージ！`, '#ff4400');
+                    isAwakened = true; playSE('victory'); player.maxMp += 2; player.mp = player.maxMp; player.atk = Math.floor(player.atk * 1.3);
+                    document.getElementById('player-sprite').classList.add('awakened'); log(`${player.name}が覚醒！ スキルが極限進化した！`, '#00ffff');
+                    updateUI(); isProcessing = false; return true;
                 }
                 return false;
             }
 
             window.command = async function(type) {
-                if (isProcessing) return;
-                isProcessing = true;
-                gameStats.totalTurns++;
-
-                const canAct = checkStatusBeforeTurn(player);
-                if (canAct.sleep) {
-                    log(`${player.name}は眠っている...`);
-                } else if (canAct.confuse && Math.random() < 0.5) {
-                    log(`${player.name}は混乱している！`);
-                    const selfDmg = Math.floor(player.atk * 0.5);
-                    applyDamage(player, selfDmg, false, 'player', true);
-                    log(`自分を攻撃して${selfDmg}ダメージ！`, '#ffaaaa');
+                if (isProcessing) return; isProcessing = true; gameStats.totalTurns++;
+                const pCanAct = checkStatusBeforeTurn(player);
+                if (pCanAct.sleep) log(`${player.name}は眠っている...`);
+                else if (pCanAct.confuse && Math.random() < 0.5) {
+                    log(`${player.name}は混乱している！`); const selfDmg = Math.floor(player.atk * 0.5); applyDamage(player, selfDmg, false, 'player', true); log(`自分を攻撃し、${selfDmg}ダメージ！`, '#ffaaaa');
                 } else {
                     if (type === 'attack') {
-                        const dmg = calculateDamage(player.atk);
-                        if (dmg.isCrit) playSE('critical'); else playSE('attack');
-                        applyDamage(enemy, dmg.value, dmg.isCrit, 'enemy');
-                        log(`${player.name}の攻撃！ ${dmg.value}のダメージ！ ${dmg.isCrit ? '会心の一撃！' : ''}`);
+                        const dmg = calculateDamage(player.atk); if (dmg.isCrit) playSE('critical'); else playSE('attack');
+                        applyDamage(enemy, dmg.value, dmg.isCrit, 'enemy'); log(`${player.name}の攻撃！ ${enemy.name}に${dmg.value}のダメージ！ ${dmg.isCrit ? '会心！' : ''}`);
                     } else if (type === 'heal') {
                         playSE('heal');
-                        const multiplier = isAwakened ? 0.9 : 0.4;
-                        const healAmt = Math.floor(player.maxHp * (player.job === '魔法使い' ? multiplier + 0.1 : multiplier));
+                        const minR = 0.20; const maxR = 0.40;
+                        const ratio = minR + (Math.random() * (maxR - minR));
+                        const awakeningBonus = isAwakened ? 0.05 : 0;
+                        const jobBonus = (player.job === '魔法使い' ? 0.05 : 0);
+                        const healAmt = Math.floor(player.maxHp * (ratio + awakeningBonus + jobBonus));
                         player.hp = Math.min(player.maxHp, player.hp + healAmt);
-                        log(`${player.name}は祈った！ HPが${healAmt}回復！`, '#aaffaa');
+                        log(`${player.name}は精神を集中した。HPが${healAmt}回復！`, '#aaffaa');
                     } else if (type === 'skill') {
-                        player.mp -= 1;
-                        await rollDiceAndExecuteSkill();
-                        if (player.job === '戦士') {
-                            const recoil = Math.floor(player.maxHp * (isAwakened ? 0.01 : 0.03));
-                            applyDamage(player, recoil, false, 'player', true);
-                            log(`スキルの反動でHPが${recoil}減少！`, '#ffaaaa');
-                        }
+                        player.mp -= 1; await rollDiceAndExecuteSkill();
+                        if (player.job === '戦士') { const recoil = Math.floor(player.maxHp * (isAwakened ? 0.01 : 0.03)); applyDamage(player, recoil, false, 'player', true); log(`反動でHPが${recoil}減少！`, '#ffaaaa'); }
                     }
                 }
-
                 updateUI();
-                if (enemy.hp <= 0) {
-                    const evolved = await tryEvolve();
-                    if (evolved) return; 
-                    await new Promise(r => setTimeout(r, 800));
-                    showResult(true);
-                    isProcessing = false;
-                    return;
-                }
+                if (enemy.hp <= 0) { const evolved = await tryEvolve(); if (evolved) return; await new Promise(r => setTimeout(r, 800)); showResult(true); isProcessing = false; return; }
                 if (player.hp <= 0) { showResult(false); isProcessing = false; return; }
-
                 await new Promise(r => setTimeout(r, 800));
-                
                 if (enemy.hp > 0) {
-                    const enemyCanAct = checkStatusBeforeTurn(enemy);
-                    if (!enemyCanAct.sleep && (!enemyCanAct.confuse || Math.random() >= 0.5)) {
-                        
-                        // --- ENEMY ATTACK LOGIC ---
-                        const isBoss = enemy.name === 'アルティメットドラゴン';
-                        // 10% chance for Hell Fire if Ultimate Dragon
-                        if (isBoss && Math.random() < 0.10) {
-                            playSE('cutin');
-                            await playCutin('地獄の業火', 'text-red-500');
-                            playSE('dark_roar');
-                            
-                            // 1.5x Power
-                            let eDmg = Math.floor(enemy.atk * 1.5 * (0.9 + Math.random() * 0.4));
-                            const avoided = applyDamage(player, eDmg, true, 'player');
-                            if (avoided) {
-                                log(`${enemy.name}の地獄の業火をかわした！`, '#00ffff');
-                            } else {
-                                log(`${enemy.name}の地獄の業火！ ${eDmg}のダメージ！`, '#ff0000');
-                                // Heal by damage amount
-                                enemy.hp = Math.min(enemy.maxHp, enemy.hp + eDmg);
-                                log(`${enemy.name}は地獄の業火で${eDmg}回復した！`, '#aaffaa');
-                            }
+                    const eCanAct = checkStatusBeforeTurn(enemy);
+                    if (!eCanAct.sleep && (!eCanAct.confuse || Math.random() >= 0.5)) {
+                        const isBoss = enemy.name === '邪龍王アルティメット';
+                        if (isBoss && Math.random() < 0.15) {
+                            playSE('cutin'); await playCutin('地獄の業火', 'text-red-500'); playSE('dark_roar');
+                            let fireDmg = Math.floor(enemy.atk * 1.5 * (0.9 + Math.random() * 0.4));
+                            const prevHP = player.hp; const dodged = applyDamage(player, fireDmg, true, 'player');
+                            if (dodged) log(`${enemy.name}の業火を回避！`, '#00ffff');
+                            else { const realDmg = prevHP - player.hp; log(`${enemy.name}の業火！ ${realDmg}のダメージ！`, '#ff0000'); if (realDmg > 0) { enemy.hp = Math.min(enemy.maxHp, enemy.hp + realDmg); log(`${enemy.name}は生命力を吸収、${realDmg}回復！`, '#aaffaa'); } }
                         } else {
-                            const isCrit = Math.random() < 0.10;
-                            if (isCrit) playSE('bad_hit'); else playSE('hit');
-                            let eDmg = Math.floor(enemy.atk * (0.9 + Math.random() * 0.4));
-                            if (isCrit) {
-                                eDmg = Math.floor(eDmg * 1.8); 
-                                log(`${enemy.name}の痛恨の一撃！！`, '#ff0000');
-                            }
-                            const avoided = applyDamage(player, eDmg, isCrit, 'player');
-                            if (avoided) log(`${enemy.name}の攻撃をかわした！`, '#00ffff');
-                            else log(`${enemy.name}の攻撃！ ${eDmg}のダメージ！`, isCrit ? '#ff0000' : '#ffaaaa');
+                            const isCrit = Math.random() < 0.12; if (isCrit) playSE('critical'); else playSE('hit');
+                            let eDmg = Math.floor(enemy.atk * (0.8 + Math.random() * 0.4)); if (isCrit) eDmg = Math.floor(eDmg * 2.0);
+                            const dodged = applyDamage(player, eDmg, isCrit, 'player');
+                            if (dodged) log(`${enemy.name}の攻撃を回避！`, '#00ffff'); else log(`${enemy.name}の攻撃！ ${eDmg}のダメージ！`, isCrit ? '#ff0000' : '#ffaaaa');
                         }
-                    } else if (enemyCanAct.confuse) {
-                         log(`${enemy.name}は混乱している！`);
-                         const selfDmg = Math.floor(enemy.atk * 0.5);
-                         applyDamage(enemy, selfDmg, false, 'enemy', true);
-                         log(`${enemy.name}は自分を攻撃して${selfDmg}ダメージ！`, '#ffaaaa');
-                    }
+                    } else if (eCanAct.confuse) { log(`${enemy.name}は混乱し、自分を攻撃！`); const selfDmg = Math.floor(enemy.atk * 0.5); applyDamage(enemy, selfDmg, false, 'enemy', true); log(`${enemy.name}に${selfDmg}ダメージ！`, '#ffaaaa'); }
                 }
-
-                updateUI();
-                applyPoison(player);
-                applyPoison(enemy);
-                
-                if (player.hp <= 0) showResult(false);
-                else if (enemy.hp <= 0) { const evolved = await tryEvolve(); if (!evolved) showResult(true); }
+                updateUI(); applyPoisonDamage(player); applyPoisonDamage(enemy);
+                if (player.hp <= 0) showResult(false); else if (enemy.hp <= 0) { const evolved = await tryEvolve(); if (!evolved) showResult(true); }
                 isProcessing = false;
             };
 
-            function calculateDamage(baseAtk, multiplier = 1, critChance = 0.12) {
+            function calculateDamage(baseAtk, multiplier = 1, critChance = 0.15) {
                 let isCrit = Math.random() < critChance || superCharge || chargeTurns > 0;
-                let dmg = baseAtk * multiplier;
-                if (isCrit) { dmg *= 3; if (chargeTurns > 0) chargeTurns--; }
-                dmg = Math.floor(dmg * (0.9 + Math.random() * 0.2));
-                return { value: dmg, isCrit };
+                let dmg = baseAtk * multiplier; if (isCrit) { dmg *= 3; if (chargeTurns > 0) chargeTurns--; }
+                dmg = Math.floor(dmg * (0.9 + Math.random() * 0.2)); return { value: dmg, isCrit };
             }
 
             function applyDamage(target, amount, isCrit, targetType, mustHit = false) {
                 if (!mustHit && Math.random() < 0.05) return true;
                 target.hp = Math.max(0, target.hp - amount);
-                if (targetType === 'enemy') gameStats.totalDamageDealt += amount;
-                else gameStats.totalDamageTaken += amount;
+                if (targetType === 'enemy') gameStats.totalDamageDealt += amount; else gameStats.totalDamageTaken += amount;
                 const container = targetType === 'player' ? document.getElementById('player-sprite-container') : document.getElementById('enemy-sprite');
-                container.classList.add('shake');
-                setTimeout(() => container.classList.remove('shake'), 500);
-                return false;
+                container.classList.add('shake'); setTimeout(() => container.classList.remove('shake'), 500); return false;
             }
 
             function checkStatusBeforeTurn(unit) {
@@ -644,151 +418,76 @@
                 return res;
             }
 
-            function applyPoison(unit) {
+            function applyPoisonDamage(unit) {
                 if (unit.status.some(s => s.type === 'poison')) {
-                    const isBoss = unit.name === 'アルティメットドラゴン';
-                    const dmgRatio = isBoss ? 0.01 : 0.1;
-                    const dmg = Math.floor(unit.maxHp * dmgRatio);
+                    const isBoss = unit.name.includes('アルティメット');
+                    const dmg = Math.floor(unit.maxHp * (isBoss ? 0.01 : 0.08));
                     applyDamage(unit, dmg, false, unit === player ? 'player' : 'enemy', true);
-                    log(`${unit.name}は毒で${dmg}ダメージ！${isBoss ? '（耐性により軽減）' : ''}`, '#ff5555');
+                    log(`${unit.name}は毒により${dmg}ダメージ！`, '#ff5555');
                 }
             }
 
             async function rollDiceAndExecuteSkill() {
-                const overlay = document.getElementById('dice-overlay');
-                const anim = document.getElementById('dice-anim');
-                const resName = document.getElementById('dice-result-name');
-                overlay.classList.remove('hidden');
-                for(let i=0; i<10; i++) {
-                    playSE('dice');
-                    anim.innerText = Math.floor(Math.random()*6)+1;
-                    await new Promise(r => setTimeout(r, 60));
-                }
-                let roll = Math.floor(Math.random() * 6) + 1;
-                anim.innerText = roll;
-                const skill = player.skills[roll-1];
+                const overlay = document.getElementById('dice-overlay'); const anim = document.getElementById('dice-anim'); const resName = document.getElementById('dice-result-name');
+                overlay.classList.remove('hidden'); for(let i=0; i<10; i++) { playSE('dice'); anim.innerText = Math.floor(Math.random()*6)+1; await new Promise(r => setTimeout(r, 60)); }
+                let roll = Math.floor(Math.random() * 6) + 1; anim.innerText = roll; const skill = player.skills[roll-1];
                 
-                const displayName = isAwakened ? `【極】${skill.name}` : skill.name;
-                resName.innerText = displayName;
-                resName.className = isAwakened ? "mt-4 text-xl font-bold text-cyan-400 text-glow" : "mt-4 text-xl font-bold text-yellow-400";
+                const isFailSkill = skill.name.includes('失敗');
+                const displayName = (isAwakened && !isFailSkill) ? `【極】${skill.name}` : skill.name;
                 
-                await new Promise(r => setTimeout(r, 800));
-                overlay.classList.add('hidden');
-
-                if (isAwakened) {
-                    playSE('cutin');
-                    await playCutin(`極・${skill.name}`, 'text-cyan-400');
-                } else {
-                    let specialCutinName = null;
-                    if (player.job === '勇者' && roll === 1) specialCutinName = "必殺の一撃";
-                    if (player.job === '忍者' && (roll === 4 || roll === 5)) specialCutinName = "手裏剣乱舞";
-                    if (player.job === '戦士' && roll === 1) specialCutinName = "奥義・大地斬";
-                    if (player.job === '魔法使い' && roll === 6) specialCutinName = "流星群";
-                    if (specialCutinName) { playSE('cutin'); await playCutin(specialCutinName, 'text-yellow-400'); }
+                resName.innerText = displayName; 
+                resName.className = (isAwakened && !isFailSkill) ? "mt-4 text-xl font-bold text-cyan-400 text-glow" : "mt-4 text-xl font-bold text-yellow-400";
+                
+                await new Promise(r => setTimeout(r, 800)); overlay.classList.add('hidden');
+                
+                if (isAwakened && !isFailSkill) { 
+                    playSE('cutin'); await playCutin(`極・${skill.name}`, 'text-cyan-400'); 
+                } else if (!isFailSkill) {
+                    let cutin = null;
+                    if (player.job === '勇者' && roll === 1) cutin = "必殺の一撃"; 
+                    if (player.job === '忍者' && (roll === 4 || roll === 5)) cutin = "手裏剣乱舞";
+                    if (player.job === '戦士' && roll === 1) cutin = "奥義・大地斬"; 
+                    if (player.job === '魔法使い' && (roll === 4 || roll === 6)) cutin = "大魔術";
+                    if (cutin) { playSE('cutin'); await playCutin(cutin, 'text-yellow-400'); }
                 }
                 
-                playSE('skill');
-                log(`${player.name}のスキル：${displayName}！`, isAwakened ? '#00ffff' : '#55aaff');
-                const boost = isAwakened ? 2.0 : 1.0;
-
-                let dmgValue = 0;
-                let isCrit = false;
+                playSE('skill'); 
+                log(`${player.name}の奥義：${displayName}！`, (isAwakened && !isFailSkill) ? '#00ffff' : '#55aaff');
+                
+                // バランス調整: 戦士(シュンスケ)のみ覚醒倍率を1.5倍に抑える。他は2.0倍。
+                const jobAwakeBoost = (player.job === '戦士') ? 1.5 : 2.0;
+                const boost = (isAwakened && !isFailSkill) ? jobAwakeBoost : 1.0; 
+                let dmg = 0;
 
                 if (player.job === '勇者') {
-                    if (roll === 1) {
-                        const isWeak = (enemy.hp <= enemy.maxHp * 0.4) || isAwakened;
-                        dmgValue = isWeak ? (isAwakened ? 1200 : 777) : calculateDamage(player.atk, 2.0 * boost, 1.0).value;
-                        isCrit = true; playSE('critical');
-                        applyDamage(enemy, dmgValue, isCrit, 'enemy', isWeak);
-                        log(`${enemy.name}に${dmgValue}のダメージ！`, '#ff0000');
-                    } else if (roll === 2) { chargeTurns = isAwakened ? 4 : 2; log(`攻撃力が大幅に高まった！`); }
-                    else if (roll === 3) {
-                        dmgValue = calculateDamage(player.atk, 1.2 * boost, 1.0).value + Math.floor(enemy.maxHp * (isAwakened ? 0.25 : 0.1));
-                        playSE('critical');
-                        applyDamage(enemy, dmgValue, true, 'enemy', true);
-                        log(`${enemy.name}に${dmgValue}のダメージ！`, '#ff0000');
-                    } else if (roll === 4 && isAwakened) {
-                        log(`失敗をねじ伏せた！`);
-                        dmgValue = calculateDamage(player.atk, 3.0).value;
-                        applyDamage(enemy, dmgValue, true, 'enemy', true);
-                    } else if (roll === 5 || roll === 6) {
-                        dmgValue = calculateDamage(player.atk, 1.5 * boost, roll===6 ? 1.0 : 0.2).value;
-                        if (roll === 6 || isAwakened) playSE('critical');
-                        applyDamage(enemy, dmgValue, roll===6 || isAwakened, 'enemy', roll===6 || isAwakened);
-                        player.hp = Math.min(player.maxHp, player.hp + dmgValue);
-                        log(`${enemy.name}に${dmgValue}のダメージを与え、体力を回復した！`);
-                    }
+                    if (roll === 1) { const isLowHP = (enemy.hp <= enemy.maxHp * 0.4) || isAwakened; dmg = isLowHP ? (isAwakened ? 1200 : 777) : calculateDamage(player.atk, 2.5 * boost, 1.0).value; applyDamage(enemy, dmg, true, 'enemy', isLowHP); log(`${enemy.name}に${dmg}のダメージ！`, '#ff0000'); }
+                    else if (roll === 2) { chargeTurns = isAwakened ? 5 : 2; log(`力がみなぎる！`); }
+                    else if (roll === 3) { dmg = calculateDamage(player.atk, 1.2 * boost, 1.0).value + Math.floor(enemy.maxHp * (isAwakened ? 0.3 : 0.12)); applyDamage(enemy, dmg, true, 'enemy', true); log(`${enemy.name}に${dmg}のダメージ！`, '#ff0000'); }
+                    else if (roll === 4) { log(`しかし何も起きなかった。`); }
+                    else if (roll === 5 || roll === 6) { dmg = calculateDamage(player.atk, 1.5 * boost, roll===6 ? 1.0 : 0.3).value; const preHP = enemy.hp; applyDamage(enemy, dmg, roll===6 || isAwakened, 'enemy', roll===6 || isAwakened); const heal = preHP - enemy.hp; player.hp = Math.min(player.maxHp, player.hp + heal); log(`${dmg}ダメージを与え${heal}回復！`); }
                 } else if (player.job === '忍者') {
-                    if (roll === 2) { chargeTurns = isAwakened ? 5 : 2; log(`攻撃力が大幅に高まった！`); }
-                    else if (roll === 3 || roll === 6) { 
-                        if (Math.random() < (isAwakened ? 1.0 : 0.8)) { enemy.status.push({type: 'poison', turns: 99}); log(`敵を毒状態にした！`); } 
-                    }
-                    else if (roll === 4 || roll === 5 || (roll === 1 && isAwakened)) {
-                        const count = isAwakened ? 12 : 5;
-                        for(let i=0; i<count; i++) {
-                            playSE('attack');
-                            dmgValue = Math.floor(player.atk * 0.4 * boost);
-                            applyDamage(enemy, dmgValue, false, 'enemy', true);
-                            updateUI();
-                            await new Promise(r => setTimeout(r, 100));
-                        }
+                    if (roll === 1) { log(`しかし何も起きなかった。`); }
+                    else if (roll === 2) { chargeTurns = isAwakened ? 5 : 2; log(`殺気が高まる！`); }
+                    else if (roll === 3 || roll === 6) { if (Math.random() < (isAwakened ? 1.0 : 0.8)) { enemy.status.push({type: 'poison', turns: 99}); log(`${enemy.name}を猛毒にした！`); } }
+                    else if (roll === 4 || roll === 5) {
+                        const count = isAwakened ? 12 : 5; let total = 0;
+                        for(let i=0; i<count; i++) { playSE('attack'); let tick = Math.floor(player.atk * 0.45 * boost * (0.8 + Math.random() * 0.4)); applyDamage(enemy, tick, false, 'enemy', true); total += tick; updateUI(); await new Promise(r => setTimeout(r, 800)); }
+                        log(`連続攻撃！ 合計${total}のダメージ！`);
                     }
                 } else if (player.job === '戦士') {
-                    if (roll === 1 || (roll === 4 && isAwakened)) { 
-                        dmgValue = calculateDamage(player.atk, 3.0 * boost).value; 
-                        playSE('critical'); 
-                        applyDamage(enemy, dmgValue, true, 'enemy', true); 
-                        log(`${dmgValue}のダメージ！`, '#ff0000'); 
-                    }
-                    else if (roll === 2) { chargeTurns = isAwakened ? 4 : 2; log(`攻撃力が大幅に高まった！`); }
-                    else if (roll === 3) { superCharge = true; log(`会心率が永続アップ！`); if(isAwakened) player.atk += 20; }
-                    else if (roll === 5) { 
-                        dmgValue = Math.floor(enemy.hp * (isAwakened ? 0.9 : 0.7)); 
-                        playSE('bad_hit'); 
-                        applyDamage(enemy, dmgValue, false, 'enemy', true); 
-                        log(`${enemy.name}の生命力を大幅に削り取った！`, '#ff4444'); 
-                    }
-                    else if (roll === 6) { 
-                        dmgValue = player.atk * boost;
-                        applyDamage(enemy, dmgValue, false, 'enemy', true); 
-                        enemy.status.push({type:'confuse', turns: 5}); 
-                        log(`${enemy.name}にダメージを与え、混乱させた！`);
-                    }
+                    if (roll === 1) { dmg = calculateDamage(player.atk, 2.5 * boost).value; applyDamage(enemy, dmg, true, 'enemy', true); log(`${enemy.name}に${dmg}のダメージ！`, '#ff0000'); }
+                    else if (roll === 2) { chargeTurns = isAwakened ? 4 : 2; log(`筋肉膨張！`); }
+                    else if (roll === 3) { superCharge = true; log(`会心率限界突破！`); if(isAwakened) player.atk += 15; }
+                    else if (roll === 4) { log(`しかし何も起きなかった。`); }
+                    else if (roll === 5) { dmg = Math.floor(enemy.hp * (isAwakened ? 0.8 : 0.7)); applyDamage(enemy, dmg, false, 'enemy', true); log(`${enemy.name}に${dmg}のダメージ！`, '#ff4444'); }
+                    else if (roll === 6) { dmg = calculateDamage(player.atk, 1.2 * boost).value; applyDamage(enemy, dmg, false, 'enemy', true); enemy.status.push({type:'confuse', turns: 5}); log(`${enemy.name}を混乱させた！`); }
                 } else if (player.job === '魔法使い') {
-                    if (roll === 1 || (roll === 5 && isAwakened)) { 
-                        dmgValue = Math.floor(150 * boost); 
-                        applyDamage(enemy, dmgValue, false, 'enemy', true); 
-                        enemy.status.push({type:'confuse', turns: 4}); 
-                        log(`${enemy.name}に${dmgValue}のダメージを与え、混乱させた！`);
-                    }
-                    else if (roll === 2) { 
-                        player.hp = player.maxHp; 
-                        if (!isAwakened) player.status.push({type:'sleep', turns: 2}); 
-                        log(`体力を全回復した！`);
-                    }
-                    else if (roll === 3) { 
-                        const pRatio = player.hp / player.maxHp;
-                        const eRatio = enemy.hp / enemy.maxHp;
-                        const avgRatio = (pRatio + eRatio) / 2;
-                        
-                        player.hp = Math.floor(player.maxHp * avgRatio);
-                        enemy.hp = Math.floor(enemy.maxHp * avgRatio);
-                        log(`お互いの体力の割合を分け合った！`); 
-                    }
-                    else if (roll === 4) { 
-                        dmgValue = calculateDamage(player.atk, 5.0 * boost).value; 
-                        applyDamage(enemy, dmgValue, false, 'enemy', true); 
-                        const heal = Math.floor(dmgValue * (0.2 * boost));
-                        player.hp = Math.min(player.maxHp, player.hp + heal);
-                        log(`${enemy.name}に${dmgValue}のダメージ！ HPを${heal}回復した！`);
-                    }
-                    else if (roll === 6) { 
-                        dmgValue = Math.floor(enemy.hp * (isAwakened ? 0.8 : 0.4)); 
-                        playSE('bad_hit'); 
-                        applyDamage(enemy, dmgValue, false, 'enemy', true); 
-                        enemy.status.push({type:'sleep', turns: 4}); 
-                        log(`${enemy.name}に${dmgValue}のダメージを与え、眠らせた！`);
-                    }
+                    if (roll === 1) { dmg = Math.floor(180 * boost); applyDamage(enemy, dmg, false, 'enemy', true); enemy.status.push({type:'confuse', turns: 4}); log(`${enemy.name}に${dmg}のダメージと混乱！`); }
+                    else if (roll === 2) { player.hp = player.maxHp; if (!isAwakened) player.status.push({type:'sleep', turns: 2}); log(`魔力で全回復！`); }
+                    else if (roll === 3) { const pR = player.hp / player.maxHp; const eR = enemy.hp / enemy.maxHp; const avg = (pR + eR) / 2; player.hp = Math.floor(player.maxHp * avg); enemy.hp = Math.floor(enemy.maxHp * avg); log(`HP割合を平均化した！`); }
+                    else if (roll === 4) { dmg = calculateDamage(player.atk, 5.5 * boost).value; const before = enemy.hp; applyDamage(enemy, dmg, false, 'enemy', true); const heal = Math.floor((before - enemy.hp) * (0.25 * boost)); player.hp = Math.min(player.maxHp, player.hp + heal); log(`${dmg}ダメージを与え、${heal}回復！`); }
+                    else if (roll === 5) { let sDmg = Math.floor(player.maxHp * 0.15); applyDamage(player, sDmg, false, 'player', true); log(`魔力が暴走！ 自分に${sDmg}のダメージ！`, '#ffaaaa'); }
+                    else if (roll === 6) { dmg = Math.floor(enemy.hp * (isAwakened ? 0.85 : 0.45)); applyDamage(enemy, dmg, false, 'enemy', true); enemy.status.push({type:'sleep', turns: 4}); log(`${enemy.name}に${dmg}ダメージと睡眠！`); }
                 }
                 updateUI();
             }
@@ -799,13 +498,10 @@
                 const title = document.getElementById('result-title');
                 const msg = document.getElementById('result-message');
                 const thanks = document.getElementById('thanks-message');
-                
                 if (victory) {
-                    playSE('victory');
-                    title.innerText = "✨ VICTORY ✨";
+                    playSE('victory'); title.innerText = "✨ VICTORY ✨";
                     if (stage >= MONSTERS.length - 1 && enemy.hasEvolved) {
-                        title.innerText = "🌈 ALL CLEAR 🌈";
-                        thanks.classList.remove('hidden');
+                        title.innerText = "🌈 ALL CLEAR 🌈"; thanks.classList.remove('hidden');
                         document.getElementById('adventure-stats').classList.remove('hidden');
                         document.getElementById('stat-hero').innerText = `${gameStats.heroName} (${gameStats.heroJob})`;
                         document.getElementById('stat-dmg-dealt').innerText = gameStats.totalDamageDealt;
@@ -813,26 +509,21 @@
                         document.getElementById('stat-turns').innerText = gameStats.totalTurns;
                         document.getElementById('next-btn').classList.add('hidden');
                         document.getElementById('restart-btn').classList.remove('hidden');
+                        msg.innerText = `${enemy.name}を討ち果たし、世界の平和を取り戻した！`;
                     } else {
                         msg.innerText = `${enemy.name}を倒した！`;
                     }
                 } else {
-                    playSE('evolve');
-                    title.innerText = "GAME OVER";
-                    msg.innerText = "冒険はここで終わってしまった...";
-                    document.getElementById('next-btn').classList.add('hidden');
-                    document.getElementById('restart-btn').classList.remove('hidden');
+                    title.innerText = "GAME OVER"; msg.innerText = "冒険はここで幕を閉じた...";
+                    document.getElementById('next-btn').classList.add('hidden'); document.getElementById('restart-btn').classList.remove('hidden');
                 }
             }
 
             window.nextStage = function() {
-                const healAmount = Math.floor(player.maxHp * 0.3);
-                player.hp = Math.min(player.maxHp, player.hp + healAmount);
-                stage++;
-                document.getElementById('result-screen').classList.add('hidden');
-                document.getElementById('battle-screen').classList.remove('hidden');
-                initStage();
-                log(`休息によりHPが${healAmount}回復した。`, '#4ade80');
+                const ratio = 0.2 + (Math.random() * 0.1); const healAmt = Math.floor(player.maxHp * ratio);
+                player.hp = Math.min(player.maxHp, player.hp + healAmt); stage++;
+                document.getElementById('result-screen').classList.add('hidden'); document.getElementById('battle-screen').classList.remove('hidden');
+                initStage(); log(`HPが${healAmt}回復した。`, '#4ade80');
             };
         })();
     </script>

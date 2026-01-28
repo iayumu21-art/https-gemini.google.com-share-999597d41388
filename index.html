@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>さいころジークエスト ✨AI Edition</title>
+    <title>さいころジークエスト</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
@@ -15,162 +15,231 @@
             height: 100vh;
             margin: 0;
         }
-        #app { height: 100vh; max-height: 100vh; }
-        .battle-log { flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.8); min-height: 60px; }
-        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        #app {
+            height: 100vh;
+            max-height: 100vh;
+        }
+        .battle-log {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.8);
+            min-height: 60px;
+        }
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
         @keyframes shake {
             10%, 90% { transform: translate3d(-1px, 0, 0); }
             20%, 80% { transform: translate3d(2px, 0, 0); }
             30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
             40%, 60% { transform: translate3d(4px, 0, 0); }
         }
-        .dice {
-            display: inline-block; width: 60px; height: 60px; line-height: 60px;
-            text-align: center; background: white; color: black; border-radius: 8px;
-            font-size: 32px; font-weight: bold;
+        .dodge {
+            animation: dodge 0.4s ease-in-out;
         }
-        .awakened { animation: aura-pulse 1.5s infinite ease-in-out; }
+        @keyframes dodge {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-20px); }
+            75% { transform: translateX(20px); }
+            100% { transform: translateX(0); }
+        }
+        .dice {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            text-align: center;
+            background: white;
+            color: black;
+            border-radius: 8px;
+            font-size: 32px;
+            font-weight: bold;
+        }
         @keyframes aura-pulse {
             0% { filter: drop-shadow(0 0 5px #fff); transform: scale(1); }
             50% { filter: drop-shadow(0 0 15px #00ffff); transform: scale(1.1); }
             100% { filter: drop-shadow(0 0 5px #fff); transform: scale(1); }
         }
-        .cutin-active { animation: cutin-in 1.5s ease-in-out forwards; }
+        .awakened {
+            animation: aura-pulse 1.5s infinite ease-in-out;
+        }
         @keyframes cutin-in {
             0% { transform: translateX(-100%) skewX(-20deg); opacity: 0; }
             20% { transform: translateX(0) skewX(-20deg); opacity: 1; }
             80% { transform: translateX(0) skewX(-20deg); opacity: 1; }
             100% { transform: translateX(100%) skewX(-20deg); opacity: 0; }
         }
-        .text-glow { text-shadow: 0 0 10px rgba(255,255,255,0.8), 0 0 20px currentColor; }
-        .confetti { position: absolute; width: 10px; height: 10px; z-index: 100; pointer-events: none; animation: fall linear forwards; }
-        @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
-        
-        /* Loading Spinner */
-        .loading-dots:after {
-            content: '.';
-            animation: dots 1s steps(5, end) infinite;
+        .cutin-active {
+            animation: cutin-in 1.5s ease-in-out forwards;
         }
-        @keyframes dots {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60% { content: '...'; }
-            80%, 100% { content: ''; }
+        .text-glow {
+            text-shadow: 0 0 10px rgba(255,255,255,0.8), 0 0 20px currentColor;
+        }
+        .flash-dark {
+            animation: flash-dark-anim 1.2s ease-out;
+        }
+        @keyframes flash-dark-anim {
+            0% { background-color: #000; opacity: 1; }
+            50% { background-color: #200040; opacity: 0.8; }
+            100% { background-color: transparent; opacity: 0; }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #f00;
+            z-index: 100;
+            pointer-events: none;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(360deg); }
+        }
+        @keyframes victory-zoom {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .victory-anim {
+            animation: victory-zoom 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
     </style>
 </head>
 <body class="flex items-center justify-center">
 
     <div id="app" class="relative w-full max-w-md bg-gray-900 p-2 sm:p-4 rounded-none sm:rounded-xl shadow-2xl flex flex-col border-4 border-gray-700">
-        
-        <!-- Start Screen -->
+        <!-- Character Selection Screen -->
         <div id="start-screen" class="flex-grow flex flex-col items-center justify-center overflow-y-auto">
-            <h1 class="text-2xl font-bold mb-2 text-yellow-500 text-center text-glow">さいころジークエスト</h1>
-            <p class="mb-4 text-[10px] text-blue-300">✨ Gemini AI Powerd Edition ✨</p>
+            <h1 class="text-2xl font-bold mb-4 text-yellow-500 text-center text-glow">さいころジークエスト</h1>
+            <p class="mb-4 text-sm text-gray-300">冒険者を選んでください</p>
             
-            <div class="grid grid-cols-2 gap-2 w-full mb-4 px-2">
-                <button onclick="window.showDetails('ayumu')" class="bg-blue-900 p-3 rounded border-2 border-transparent hover:border-white transition text-white">
-                    <div class="text-3xl mb-1">⚔️</div>
-                    <div class="text-[10px] font-bold">アユム</div>
+            <div class="grid grid-cols-2 gap-2 w-full mb-4">
+                <button onclick="window.showDetails('ayumu')" class="bg-blue-900 p-4 rounded border-2 border-transparent hover:border-white transition text-white text-center">
+                    <div class="text-4xl mb-2">⚔️</div>
+                    <div class="text-xs font-bold">アユム (勇者)</div>
                 </button>
-                <button onclick="window.showDetails('hikaru')" class="bg-green-900 p-3 rounded border-2 border-transparent hover:border-white transition text-white">
-                    <div class="text-3xl mb-1">🥷</div>
-                    <div class="text-[10px] font-bold">ヒカル</div>
+                <button onclick="window.showDetails('hikaru')" class="bg-green-900 p-4 rounded border-2 border-transparent hover:border-white transition text-white text-center">
+                    <div class="text-4xl mb-2">🥷</div>
+                    <div class="text-xs font-bold">ヒカル (忍者)</div>
                 </button>
-                <button onclick="window.showDetails('shunsuke')" class="bg-red-900 p-3 rounded border-2 border-transparent hover:border-white transition text-white">
-                    <div class="text-3xl mb-1">🛡️</div>
-                    <div class="text-[10px] font-bold">シュンスケ</div>
+                <button onclick="window.showDetails('shunsuke')" class="bg-red-900 p-4 rounded border-2 border-transparent hover:border-white transition text-white text-center">
+                    <div class="text-4xl mb-2">🛡️</div>
+                    <div class="text-xs font-bold">シュンスケ (戦士)</div>
                 </button>
-                <button onclick="window.showDetails('hiiro')" class="bg-purple-900 p-3 rounded border-2 border-transparent hover:border-white transition text-white">
-                    <div class="text-3xl mb-1">🧙</div>
-                    <div class="text-[10px] font-bold">ヒイロ</div>
+                <button onclick="window.showDetails('hiiro')" class="bg-purple-900 p-4 rounded border-2 border-transparent hover:border-white transition text-white text-center">
+                    <div class="text-4xl mb-2">🧙</div>
+                    <div class="text-xs font-bold">ヒイロ (魔法使い)</div>
                 </button>
             </div>
 
             <div id="char-detail" class="hidden w-full bg-black p-3 border-2 border-yellow-500 rounded mb-2">
                 <h2 id="detail-name" class="text-lg font-bold text-yellow-400"></h2>
-                <div id="detail-stats" class="text-xs mb-2 text-gray-300"></div>
+                <div id="detail-stats" class="text-xs mb-2 text-gray-300 border-b border-gray-700 pb-2"></div>
+                <div class="text-[10px] text-gray-400 font-bold mt-2 mb-1">【スキルリスト (ダイスの目)】</div>
+                <ul id="detail-skills" class="text-[9px] list-none mb-3 grid grid-cols-1 gap-1 text-gray-200"></ul>
                 <button onclick="window.startGame()" class="w-full bg-yellow-600 hover:bg-yellow-500 py-2 rounded font-bold text-white text-sm">冒険に出る</button>
             </div>
         </div>
 
         <!-- Battle Screen -->
         <div id="battle-screen" class="hidden h-full flex flex-col relative overflow-hidden">
-            <!-- AI Analysis Panel (Floating) -->
-            <div id="ai-analysis" class="absolute top-2 left-2 right-2 bg-blue-900/40 border border-blue-500/50 rounded p-2 z-30 hidden backdrop-blur-sm">
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="text-xs font-bold text-blue-300">✨ AI解析中</span>
-                    <div id="ai-loading" class="loading-dots text-blue-300 hidden"></div>
-                </div>
-                <div id="ai-monster-desc" class="text-[9px] text-gray-100 leading-tight italic"></div>
-            </div>
-
             <div id="flash-overlay" class="absolute inset-0 z-50 pointer-events-none"></div>
 
-            <!-- Enemy Area -->
-            <div class="relative flex flex-col h-44 bg-gray-800 rounded-t-lg border-b-2 border-gray-700 p-2 pt-14">
+            <div id="cutin-layer" class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center opacity-0">
+                <div id="cutin-banner" class="w-[150%] h-24 bg-gradient-to-r from-transparent via-white/20 to-transparent border-y-4 border-white flex items-center justify-center">
+                    <span id="cutin-text" class="text-4xl font-black italic tracking-tighter text-glow"></span>
+                </div>
+            </div>
+
+            <div class="relative flex flex-col h-40 bg-gray-800 rounded-t-lg border-b-2 border-gray-700 p-2">
                 <div class="w-full mb-auto">
                     <div class="flex justify-between text-xs text-white mb-1">
-                        <span id="enemy-name" class="font-bold"></span>
-                        <span id="enemy-hp-text"></span>
+                        <span id="enemy-name" class="font-bold drop-shadow-lg"></span>
+                        <span id="enemy-hp-text" class="font-bold"></span>
                     </div>
                     <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden border border-gray-600">
                         <div id="enemy-hp-bar" class="bg-red-500 h-full transition-all duration-300"></div>
                     </div>
+                    <div id="enemy-status" class="flex mt-1 gap-1 min-h-[14px]"></div>
                 </div>
                 <div class="flex items-center justify-center flex-grow">
-                    <div id="enemy-sprite" class="text-7xl transition-all duration-500 drop-shadow-lg">👾</div>
+                    <div id="enemy-sprite" class="text-6xl transition-all duration-500 drop-shadow-lg">👾</div>
                 </div>
             </div>
 
-            <!-- Player Area -->
             <div class="p-2 bg-gray-900 border-x-2 border-gray-700 flex flex-col items-center">
-                <div id="player-sprite-container" class="mb-1">
-                    <div id="player-sprite" class="text-4xl"></div>
+                <div id="player-sprite-container" class="mb-1 transition-transform">
+                    <div id="player-sprite" class="text-4xl drop-shadow-md"></div>
                 </div>
-                <div class="w-full px-2">
+                <div class="w-full">
                     <div class="flex justify-between text-xs mb-1">
                         <span id="player-name" class="font-bold text-blue-400"></span>
                         <span id="player-hp-text"></span>
                     </div>
-                    <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden border border-gray-600">
+                    <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden mb-1 border border-gray-600">
                         <div id="player-hp-bar" class="bg-green-500 h-full transition-all duration-300"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-300">
+                        <span id="player-mp-text"></span>
+                        <div id="player-status" class="flex gap-1 min-h-[12px]"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="battle-log" class="battle-log p-2 text-[10px] border-2 border-gray-700 bg-black font-mono leading-tight"></div>
+            <div id="battle-log" class="battle-log p-2 text-[11px] border-2 border-gray-700 bg-black font-mono leading-tight">
+                <div>冒険が始まった！</div>
+            </div>
 
             <div id="action-panel" class="grid grid-cols-2 gap-1 p-2 bg-gray-800 rounded-b-lg border-t-2 border-gray-700">
-                <button onclick="window.command('attack')" class="bg-gray-700 hover:bg-gray-600 py-2 rounded text-white font-bold text-sm">攻撃</button>
-                <button onclick="window.command('heal')" class="bg-emerald-700 hover:bg-emerald-600 py-2 rounded text-white font-bold text-sm">回復</button>
-                <button id="skill-btn" onclick="window.command('skill')" class="bg-blue-700 hover:bg-blue-600 py-2 rounded col-span-2 text-white font-bold text-sm">スキル (MP 1)</button>
+                <button onclick="window.command('attack')" class="bg-gray-700 hover:bg-gray-600 py-2 rounded text-white font-bold text-sm border-b-2 border-gray-900">攻撃</button>
+                <button onclick="window.command('heal')" class="bg-emerald-700 hover:bg-emerald-600 py-2 rounded text-white font-bold text-sm border-b-2 border-emerald-900">回復</button>
+                <button id="skill-btn" onclick="window.command('skill')" class="bg-blue-700 hover:bg-blue-600 py-2 rounded col-span-2 text-white font-bold text-sm border-b-2 border-blue-900">スキル (MP 1)</button>
             </div>
         </div>
 
         <!-- Result Screen -->
-        <div id="result-screen" class="hidden flex-grow flex flex-col items-center justify-center text-center p-4 overflow-y-auto">
-            <h2 id="result-title" class="text-3xl font-bold mb-4 text-glow"></h2>
+        <div id="result-screen" class="hidden flex-grow flex flex-col items-center justify-center text-center z-50 overflow-y-auto pt-4 pb-4">
+            <h2 id="result-title" class="text-3xl font-bold mb-4 drop-shadow-lg victory-anim"></h2>
             
-            <div id="ai-epic-story" class="w-full bg-black/60 border-2 border-blue-500 rounded-lg p-3 mb-4 hidden">
-                <h3 class="text-blue-400 font-bold border-b border-blue-800 mb-2 pb-1 text-center">✨ AIが綴る英雄譚 ✨</h3>
-                <div id="ai-story-content" class="text-[10px] text-gray-200 text-left leading-relaxed max-h-40 overflow-y-auto pr-1">
-                    物語を生成中<span class="loading-dots"></span>
+            <div id="adventure-stats" class="w-full px-4 mb-4 hidden">
+                <div class="bg-black/60 border-2 border-yellow-600 rounded-lg p-3 text-left">
+                    <h3 class="text-yellow-400 font-bold border-b border-yellow-800 mb-2 pb-1 text-center">✨ 冒険の記録 ✨</h3>
+                    <div class="grid grid-cols-1 gap-2 text-sm">
+                        <div class="flex justify-between border-b border-gray-800 py-1">
+                            <span class="text-gray-400">勇者:</span>
+                            <span id="stat-hero" class="text-white font-bold"></span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-800 py-1">
+                            <span class="text-gray-400">与えた総ダメージ:</span>
+                            <span id="stat-dmg-dealt" class="text-red-400 font-bold"></span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-800 py-1">
+                            <span class="text-gray-400">受けた総ダメージ:</span>
+                            <span id="stat-dmg-taken" class="text-orange-400 font-bold"></span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-800 py-1">
+                            <span class="text-gray-400">かかった総ターン数:</span>
+                            <span id="stat-turns" class="text-blue-400 font-bold"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div id="result-message" class="text-sm text-white mb-6"></div>
+            <div id="result-message" class="text-sm text-white px-4 mb-6 leading-relaxed"></div>
             
+            <div id="thanks-message" class="hidden text-xs text-yellow-200 mb-8 italic">
+                プレイしてくれてありがとう！
+            </div>
+
             <div class="flex flex-col gap-2 w-full px-8">
-                <button id="next-btn" onclick="window.nextStage()" class="bg-yellow-600 hover:bg-yellow-500 py-3 rounded font-bold text-white text-sm">次のエリアへ</button>
+                <button id="next-btn" onclick="window.nextStage()" class="bg-yellow-600 hover:bg-yellow-500 py-3 rounded font-bold text-white text-sm shadow-lg">次のエリアへ</button>
                 <button id="restart-btn" onclick="location.reload()" class="hidden bg-gray-600 hover:bg-gray-500 py-3 rounded font-bold text-white text-sm">タイトルへ戻る</button>
             </div>
         </div>
 
-        <!-- Dice Overlay -->
-        <div id="dice-overlay" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div id="dice-overlay" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
             <div class="text-center p-6 bg-gray-900 rounded-2xl border-2 border-yellow-500 shadow-2xl">
-                <div id="dice-anim" class="dice">?</div>
+                <div id="dice-anim" class="dice shadow-lg">?</div>
                 <div id="dice-result-name" class="mt-4 text-xl font-bold text-yellow-400"></div>
             </div>
         </div>
@@ -178,95 +247,107 @@
 
     <script>
         (function() {
-            const apiKey = ""; // Runtime automatically provides this
-
             const CHARACTERS = {
-                ayumu: { name: 'アユム', job: '勇者', icon: '⚔️', maxHp: 400, atk: 30, maxMp: 5 },
-                hikaru: { name: 'ヒカル', job: '忍者', icon: '🥷', maxHp: 280, atk: 45, maxMp: 5 },
-                shunsuke: { name: 'シュンスケ', job: '戦士', icon: '🛡️', maxHp: 520, atk: 35, maxMp: 3 },
-                hiiro: { name: 'ヒイロ', job: '魔法使い', icon: '🧙', maxHp: 330, atk: 20, maxMp: 10 }
+                ayumu: { 
+                    name: 'アユム', job: '勇者', icon: '⚔️', maxHp: 400, atk: 30, maxMp: 5, 
+                    skills: [
+                        { name: '必殺の一撃', desc: '弱っている敵に777 / 通常は大ダメージ' },
+                        { name: 'ためる', desc: '次の物理攻撃が3倍' },
+                        { name: '希望の一振り', desc: '会心の一撃 + 敵最大HPの10%加算' },
+                        { name: '失敗', desc: '何もおきない' },
+                        { name: 'ミラクルソード', desc: '通常ダメージ + 与えた分回復' },
+                        { name: 'ミラクルソード改', desc: '必中会心ダメージ + 与えた分回復' }
+                    ] 
+                },
+                hikaru: { 
+                    name: 'ヒカル', job: '忍者', icon: '🥷', maxHp: 280, atk: 45, maxMp: 5, 
+                    skills: [
+                        { name: '失敗', desc: '何もおきない' },
+                        { name: 'ためる', desc: '次の攻撃が3倍' },
+                        { name: '毒矢', desc: '成功率80%:敵を毒状態にする' },
+                        { name: '手裏剣', desc: '威力35%×5回連続攻撃' },
+                        { name: '手裏剣', desc: '威力35%×5回連続攻撃' },
+                        { name: '毒矢', desc: '成功率80%:敵を毒状態にする' }
+                    ] 
+                },
+                shunsuke: { 
+                    name: 'シュンスケ', job: '戦士', icon: '🛡️', maxHp: 520, atk: 35, maxMp: 3, 
+                    skills: [
+                        { name: '大地斬', desc: '攻撃力の2.5倍ダメ (スキル反動:HP3%消費)' },
+                        { name: 'ためる', desc: '次の攻撃が3倍 (次回の被ダメ軽減)' },
+                        { name: '超ためる', desc: '永続的に会心率UP (被ダメ軽減)' },
+                        { name: '失敗', desc: '何もおきない (スキル反動:HP3%消費)' },
+                        { name: '死の一振り', desc: '敵HPの70%を削る (スキル反動:HP3%消費)' },
+                        { name: 'こんらん攻撃', desc: 'ダメ+混乱付与 (スキル反動:HP3%消費)' }
+                    ] 
+                },
+                hiiro: { 
+                    name: 'ヒイロ', job: '魔法使い', icon: '🧙', maxHp: 330, atk: 20, maxMp: 10, 
+                    skills: [
+                        { name: 'スターダスト', desc: '固定65ダメージ + 成功率80%で混乱' },
+                        { name: '眠る', desc: 'HP全回復 + 2ターン睡眠' },
+                        { name: '痛み分け', desc: 'お互いのHPを平均化する' },
+                        { name: 'レインボーアロー', desc: '攻撃力の4.5倍ダメージ + 10～25%回復' },
+                        { name: '失敗', desc: '暴走！ 自分に最大HPの25%ダメージ' },
+                        { name: 'シューティングスター', desc: '割合ダメージ(背水で威力UP) + 睡眠' }
+                    ] 
+                }
             };
 
             const MONSTERS = [
                 { name: 'スライム', icon: '💧', hp: 80, atk: 18 },
                 { name: 'ゴブリン', icon: '👺', hp: 140, atk: 28 },
                 { name: 'オーク', icon: '🐗', hp: 280, atk: 42 },
-                { name: 'ドラゴン', icon: '🐲', hp: 600, atk: 65 }
+                { name: 'ドラゴン', icon: '🐲', hp: 550, atk: 60, hasEvolved: false }
             ];
+
+            // Global Game Stats
+            let gameStats = {
+                totalDamageDealt: 0,
+                totalDamageTaken: 0,
+                totalTurns: 0
+            };
 
             let player = null;
             let enemy = null;
             let stage = 0;
-            let gameStats = { totalDamageDealt: 0, totalDamageTaken: 0, totalTurns: 0 };
+            let selectedKey = '';
+            let chargeTurns = 0;
+            let superCharge = false;
             let isProcessing = false;
+            let isAwakened = false;
 
-            // --- Gemini API Integration ---
-
-            async function callGemini(prompt, systemPrompt) {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-                const payload = {
-                    contents: [{ parts: [{ text: prompt }] }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] }
-                };
-
-                let delay = 1000;
-                for (let i = 0; i < 5; i++) {
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        const data = await response.json();
-                        return data.candidates?.[0]?.content?.parts?.[0]?.text || "通信エラーが発生しました。";
-                    } catch (e) {
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
-                    }
-                }
-                return "AIとの通信に失敗しました。";
-            }
-
-            async function analyzeMonster(monsterName, icon) {
-                const aiPanel = document.getElementById('ai-analysis');
-                const aiText = document.getElementById('ai-monster-desc');
-                const loader = document.getElementById('ai-loading');
-                
-                aiPanel.classList.remove('hidden');
-                aiText.innerText = "特徴を解析中...";
-                loader.classList.remove('hidden');
-
-                const systemPrompt = "あなたはファンタジーRPGの物知りな案内人です。提示されたモンスターの名前とアイコンから、その生態や戦闘のコツ（弱点のヒントなど）を2〜3行の日本語で、非常に短い文章で教えてください。";
-                const userPrompt = `モンスター名: ${monsterName}, 見た目: ${icon}`;
-
-                const result = await callGemini(userPrompt, systemPrompt);
-                aiText.innerText = result;
-                loader.classList.add('hidden');
-            }
-
-            async function generateEpicStory() {
-                const storyPanel = document.getElementById('ai-epic-story');
-                const content = document.getElementById('ai-story-content');
-                storyPanel.classList.remove('hidden');
-                
-                const systemPrompt = "あなたは吟遊詩人です。プレイヤーの冒険の統計情報をもとに、その勇姿を称える短い英雄譚（150字程度）を日本語で作成してください。名前、与ダメージ、被ダメージ、ターン数を含め、ドラマチックに表現してください。";
-                const userPrompt = `名前: ${player.name}, ジョブ: ${player.job}, 総与ダメージ: ${gameStats.totalDamageDealt}, 総被ダメージ: ${gameStats.totalDamageTaken}, 総ターン数: ${gameStats.totalTurns}, 結果: 全ステージクリア`;
-
-                const result = await callGemini(userPrompt, systemPrompt);
-                content.innerText = result;
-            }
-
-            // --- UI & Logic ---
-
+            // --- Game Logic ---
             window.showDetails = function(key) {
+                selectedKey = key;
                 const c = CHARACTERS[key];
                 document.getElementById('char-detail').classList.remove('hidden');
-                document.getElementById('detail-name').innerText = c.name + " (" + c.job + ")";
+                document.getElementById('detail-name').innerText = c.name;
                 document.getElementById('detail-stats').innerText = `HP: ${c.maxHp} / ATK: ${c.atk} / MP: ${c.maxMp}`;
-                player = { ...c, hp: c.maxHp, mp: c.maxMp };
+                
+                const skillList = document.getElementById('detail-skills');
+                skillList.innerHTML = '';
+                c.skills.forEach((s, i) => {
+                    const li = document.createElement('li');
+                    li.className = "border-l-2 border-yellow-700 pl-2 py-0.5 text-left";
+                    li.innerHTML = `<span class="text-yellow-500 font-bold">${i+1}. ${s.name}</span><br><span class="text-gray-400">${s.desc}</span>`;
+                    skillList.appendChild(li);
+                });
             };
 
             window.startGame = function() {
+                if (!selectedKey) return;
+                const base = CHARACTERS[selectedKey];
+                player = {
+                    ...base,
+                    hp: base.maxHp,
+                    mp: base.maxMp,
+                    status: [] 
+                };
+                
+                // Reset stats
+                gameStats = { totalDamageDealt: 0, totalDamageTaken: 0, totalTurns: 0 };
+                
                 document.getElementById('start-screen').classList.add('hidden');
                 document.getElementById('battle-screen').classList.remove('hidden');
                 document.getElementById('player-sprite').innerText = player.icon;
@@ -275,31 +356,121 @@
 
             function initStage() {
                 const m = MONSTERS[stage];
-                enemy = { ...m, maxHp: m.hp, hp: m.hp };
+                enemy = { ...m, maxHp: m.hp, hp: m.hp, status: [] };
+                player.mp = player.maxMp;
+                chargeTurns = 0;
+                isAwakened = false;
+                document.getElementById('player-sprite').classList.remove('awakened');
+                if (player.name !== 'シュンスケ') superCharge = false;
                 updateUI();
                 log(`エリア${stage + 1}: ${enemy.name}が現れた！`);
-                analyzeMonster(enemy.name, enemy.icon);
             }
 
-            function log(msg) {
+            function log(msg, color = 'white') {
                 const div = document.createElement('div');
-                div.innerText = "> " + msg;
+                div.style.color = color;
+                div.innerText = msg;
                 const box = document.getElementById('battle-log');
                 box.appendChild(div);
                 box.scrollTop = box.scrollHeight;
             }
 
             function updateUI() {
-                document.getElementById('player-name').innerText = player.name;
-                document.getElementById('player-hp-text').innerText = `${Math.ceil(player.hp)}/${player.maxHp}`;
+                if(!player || !enemy) return;
+                document.getElementById('player-name').innerText = player.name + (isAwakened ? " (覚醒)" : "");
+                document.getElementById('player-hp-text').innerText = `HP ${Math.ceil(player.hp)}/${player.maxHp}`;
                 document.getElementById('player-hp-bar').style.width = `${(player.hp / player.maxHp) * 100}%`;
+                document.getElementById('player-mp-text').innerText = `MP ${player.mp}/${player.maxMp}`;
                 
+                const pStatus = document.getElementById('player-status');
+                pStatus.innerHTML = '';
+                player.status.forEach(s => {
+                    const span = document.createElement('span');
+                    span.className = "px-1 bg-red-900 text-[8px] border border-red-500 rounded text-white";
+                    span.innerText = s.type === 'poison' ? '毒' : s.type === 'confuse' ? '混' : '眠';
+                    pStatus.appendChild(span);
+                });
+
                 document.getElementById('enemy-name').innerText = enemy.name;
                 document.getElementById('enemy-sprite').innerText = enemy.icon;
-                document.getElementById('enemy-hp-text').innerText = `${Math.ceil(enemy.hp)}/${enemy.maxHp}`;
+                document.getElementById('enemy-hp-text').innerText = `HP ${Math.ceil(enemy.hp)}/${enemy.maxHp}`;
                 document.getElementById('enemy-hp-bar').style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
-                
-                document.getElementById('skill-btn').disabled = player.mp < 1;
+
+                const eStatus = document.getElementById('enemy-status');
+                eStatus.innerHTML = '';
+                enemy.status.forEach(s => {
+                    const span = document.createElement('span');
+                    span.className = "px-1 bg-red-900 text-[8px] border border-red-500 rounded text-white";
+                    span.innerText = s.type === 'poison' ? '毒' : s.type === 'confuse' ? '混' : '眠';
+                    eStatus.appendChild(span);
+                });
+
+                const skillBtn = document.getElementById('skill-btn');
+                if (player.mp < 1) {
+                    skillBtn.classList.add('opacity-50', 'pointer-events-none');
+                } else {
+                    skillBtn.classList.remove('opacity-50', 'pointer-events-none');
+                }
+            }
+
+            async function playCutin(skillName, colorClass = 'text-white') {
+                const layer = document.getElementById('cutin-layer');
+                const banner = document.getElementById('cutin-banner');
+                const text = document.getElementById('cutin-text');
+                text.innerText = skillName;
+                text.className = `text-4xl font-black italic tracking-tighter text-glow ${colorClass}`;
+                layer.classList.remove('opacity-0');
+                banner.classList.add('cutin-active');
+                await new Promise(r => setTimeout(r, 1500));
+                banner.classList.remove('cutin-active');
+                layer.classList.add('opacity-0');
+            }
+
+            function calculateHeal(maxHp, minRatio = 0.35, maxRatio = 0.65) {
+                if (player.name === 'シュンスケ') { minRatio = 0.20; maxRatio = 0.40; }
+                if (player.name === 'ヒイロ') { minRatio = 0.50; maxRatio = 0.80; }
+                if (player.name === 'ヒカル') { minRatio = 0.25; maxRatio = 0.50; }
+                const ratio = minRatio + Math.random() * (maxRatio - minRatio);
+                return Math.floor(maxHp * ratio);
+            }
+
+            async function tryEvolve() {
+                if (enemy.name === 'ドラゴン' && !enemy.hasEvolved) {
+                    isProcessing = true;
+                    log(`ドラゴンを倒した...しかし、周囲が急に暗くなる！`, '#6600cc');
+                    await new Promise(r => setTimeout(r, 1500));
+                    const flash = document.getElementById('flash-overlay');
+                    flash.classList.add('flash-dark');
+                    setTimeout(() => flash.classList.remove('flash-dark'), 1200);
+
+                    enemy.name = 'アルティメットドラゴン';
+                    enemy.icon = '🔱🐲';
+                    enemy.maxHp = 999;
+                    enemy.hp = 999;
+                    enemy.atk = 85;
+                    enemy.hasEvolved = true;
+                    enemy.status = [];
+                    log(`底知れぬ闇の中から「アルティメットドラゴン」が再誕した！`, '#ff0000');
+                    await new Promise(r => setTimeout(r, 1000));
+
+                    await playCutin('深淵の咆哮', 'text-purple-600');
+                    const preDmg = Math.floor(player.maxHp * 0.25);
+                    applyDamage(player, preDmg, false, 'player', true);
+                    log(`激しい咆哮が${player.name}を襲う！ ${preDmg}のダメージ！`, '#ff4400');
+                    await new Promise(r => setTimeout(r, 800));
+
+                    isAwakened = true;
+                    player.maxMp += 2;
+                    player.mp = player.maxMp; 
+                    player.atk = Math.floor(player.atk * 1.2);
+                    document.getElementById('player-sprite').classList.add('awakened');
+                    log(`絶望的な闇に抗い、${player.name}は覚醒した！！`, '#00ffff');
+                    await new Promise(r => setTimeout(r, 1000));
+                    updateUI();
+                    isProcessing = false;
+                    return true;
+                }
+                return false;
             }
 
             window.command = async function(type) {
@@ -307,101 +478,370 @@
                 isProcessing = true;
                 gameStats.totalTurns++;
 
-                if (type === 'attack') {
-                    const dmg = Math.floor(player.atk * (0.9 + Math.random() * 0.4));
-                    enemy.hp -= dmg;
-                    gameStats.totalDamageDealt += dmg;
-                    log(`${player.name}の攻撃！ ${dmg}のダメージ！`);
-                    shake('enemy-sprite');
-                } else if (type === 'heal') {
-                    const heal = Math.floor(player.maxHp * 0.4);
-                    player.hp = Math.min(player.maxHp, player.hp + heal);
-                    log(`${player.name}は回復した！ HPが${heal}回復！`);
-                } else if (type === 'skill') {
-                    player.mp--;
-                    await rollDice();
+                const canAct = checkStatusBeforeTurn(player);
+                if (canAct.sleep) {
+                    log(`${player.name}は眠っている...`);
+                } else if (canAct.confuse && Math.random() < 0.5) {
+                    log(`${player.name}は混乱している！`);
+                    const selfDmg = Math.floor(player.atk * 0.5);
+                    applyDamage(player, selfDmg, false, 'player', true);
+                    log(`自分を攻撃して${selfDmg}ダメージ！`, '#ffaaaa');
+                } else {
+                    if (type === 'attack') {
+                        const dmg = calculateDamage(player.atk);
+                        applyDamage(enemy, dmg.value, dmg.isCrit, 'enemy');
+                        log(`${player.name}の攻撃！ ${dmg.value}のダメージ！ ${dmg.isCrit ? '会心の一撃！' : ''}`);
+                    } else if (type === 'heal') {
+                        const healAmt = calculateHeal(player.maxHp);
+                        player.hp = Math.min(player.maxHp, player.hp + healAmt);
+                        log(`${player.name}は祈った！ HPが${healAmt}回復！`, '#aaffaa');
+                    } else if (type === 'skill') {
+                        player.mp -= 1;
+                        await rollDiceAndExecuteSkill();
+                        if (player.name === 'シュンスケ') {
+                            const recoil = Math.floor(player.maxHp * 0.03);
+                            applyDamage(player, recoil, false, 'player', true);
+                            log(`スキルの反動でHPが${recoil}減少！`, '#ffaaaa');
+                            updateUI();
+                        }
+                    }
                 }
 
                 updateUI();
                 if (enemy.hp <= 0) {
-                    await new Promise(r => setTimeout(r, 600));
+                    const evolved = await tryEvolve();
+                    if (evolved) return; 
+                    await new Promise(r => setTimeout(r, 1200));
                     showResult(true);
+                    isProcessing = false;
+                    return;
+                }
+                if (player.hp <= 0) {
+                    await new Promise(r => setTimeout(r, 1200));
+                    showResult(false);
                     isProcessing = false;
                     return;
                 }
 
                 await new Promise(r => setTimeout(r, 600));
                 
-                // Enemy turn
-                const eDmg = Math.floor(enemy.atk * (0.8 + Math.random() * 0.4));
-                player.hp -= eDmg;
-                gameStats.totalDamageTaken += eDmg;
-                log(`${enemy.name}の攻撃！ ${eDmg}のダメージ！`);
-                shake('player-sprite-container');
+                if (enemy.hp > 0) {
+                    const enemyCanAct = checkStatusBeforeTurn(enemy);
+                    if (!enemyCanAct.sleep && (!enemyCanAct.confuse || Math.random() >= 0.5)) {
+                        const isDesperate = Math.random() < 0.10;
+                        let eDmg = Math.floor(enemy.atk * (0.9 + Math.random() * 0.4));
+                        if (isDesperate) eDmg *= 2;
+                        if (player.name === 'シュンスケ' && (chargeTurns > 0 || superCharge)) {
+                            eDmg = Math.floor(eDmg * 0.8);
+                        }
+                        const avoided = applyDamage(player, eDmg, isDesperate, 'player');
+                        if (avoided) {
+                            log(`${enemy.name}の攻撃を華麗にかわした！`, '#00ffff');
+                        } else {
+                            if (isDesperate) log(`痛恨の一撃！！ ${enemy.name}の凄まじい攻撃！ ${eDmg}のダメージ！`, '#ff0000');
+                            else log(`${enemy.name}の攻撃！ ${eDmg}のダメージ！`, '#ffaaaa');
+                        }
+                    }
+                }
 
                 updateUI();
                 if (player.hp <= 0) {
+                    await new Promise(r => setTimeout(r, 1200));
                     showResult(false);
+                    isProcessing = false;
+                    return;
+                }
+
+                applyPoison(player);
+                applyPoison(enemy);
+                updateUI();
+                
+                if (enemy.hp <= 0) {
+                   const evolved = await tryEvolve();
+                   if (evolved) return;
+                   showResult(true);
+                   isProcessing = false;
+                   return;
                 }
                 isProcessing = false;
             };
 
-            async function rollDice() {
+            function calculateDamage(baseAtk, multiplier = 1, critChance = 0.125) {
+                let isCrit = Math.random() < critChance || superCharge || chargeTurns > 0;
+                let dmg = baseAtk * multiplier;
+                if (isCrit) {
+                    dmg *= 3;
+                    if (chargeTurns > 0) chargeTurns--;
+                }
+                dmg = Math.floor(dmg * (0.9 + Math.random() * 0.2));
+                return { value: dmg, isCrit };
+            }
+
+            function applyDamage(target, amount, isCrit, targetType, mustHit = false) {
+                if (!mustHit && Math.random() < 0.05) {
+                    const container = targetType === 'player' ? document.getElementById('player-sprite-container') : document.getElementById('enemy-sprite');
+                    container.classList.add('dodge');
+                    setTimeout(() => container.classList.remove('dodge'), 400);
+                    return true;
+                }
+                
+                target.hp = Math.max(0, target.hp - amount);
+                
+                // Track global stats
+                if (targetType === 'enemy') {
+                    gameStats.totalDamageDealt += amount;
+                } else {
+                    gameStats.totalDamageTaken += amount;
+                }
+
+                const container = targetType === 'player' ? document.getElementById('player-sprite-container') : document.getElementById('enemy-sprite');
+                container.classList.add('shake');
+                setTimeout(() => container.classList.remove('shake'), 500);
+                return false;
+            }
+
+            function setStatus(target, type, turns = 99, probability = 1.0) {
+                if (target.status.some(s => s.type === type)) return false;
+                if (Math.random() <= probability) {
+                    target.status.push({ type, turns });
+                    return true;
+                }
+                return false;
+            }
+
+            function checkStatusBeforeTurn(unit) {
+                let res = { sleep: false, confuse: false };
+                unit.status = unit.status.filter(s => {
+                    if (s.type === 'sleep') {
+                        s.turns--;
+                        if (s.turns <= 0 || Math.random() < 0.3) {
+                            log(`${unit.name}は目が覚めた！`);
+                            return false;
+                        }
+                        res.sleep = true;
+                        return true;
+                    }
+                    if (s.type === 'confuse') {
+                        if (Math.random() < 0.2) {
+                            log(`${unit.name}は正気を取り戻した！`);
+                            return false;
+                        }
+                        res.confuse = true;
+                    }
+                    return true;
+                });
+                return res;
+            }
+
+            function applyPoison(unit) {
+                if (unit.status.some(s => s.type === 'poison')) {
+                    const dmg = Math.floor(unit.maxHp * 0.1);
+                    applyDamage(unit, dmg, false, unit === player ? 'player' : 'enemy', true);
+                    log(`${unit.name}は毒で${dmg}ダメージ！`, '#ff5555');
+                }
+            }
+
+            async function rollDiceAndExecuteSkill() {
                 const overlay = document.getElementById('dice-overlay');
+                const anim = document.getElementById('dice-anim');
+                const resName = document.getElementById('dice-result-name');
                 overlay.classList.remove('hidden');
-                for(let i=0; i<8; i++) {
-                    document.getElementById('dice-anim').innerText = Math.floor(Math.random()*6)+1;
+                for(let i=0; i<10; i++) {
+                    anim.innerText = Math.floor(Math.random()*6)+1;
                     await new Promise(r => setTimeout(r, 60));
                 }
                 let roll = Math.floor(Math.random() * 6) + 1;
-                document.getElementById('dice-anim').innerText = roll;
-                
-                // Simplified skills for AI logic testing
-                let dmg = player.atk * (roll === 1 ? 4 : 1.5);
-                if (roll === 5 && player.name === 'ヒイロ') {
-                    const selfDmg = Math.floor(player.maxHp * 0.25);
-                    player.hp -= selfDmg;
-                    log(`暴走！ 自分に${selfDmg}ダメージ！`);
-                    dmg = 0;
-                } else {
-                    enemy.hp -= Math.floor(dmg);
-                    gameStats.totalDamageDealt += Math.floor(dmg);
-                    log(`スキル発動！ 敵に${Math.floor(dmg)}ダメージ！`);
-                }
-                
-                document.getElementById('dice-result-name').innerText = "出目: " + roll;
+                anim.innerText = roll;
+                const skill = player.skills[roll-1];
+                resName.innerText = (isAwakened ? "【覚醒】" : "") + skill.name;
                 await new Promise(r => setTimeout(r, 800));
                 overlay.classList.add('hidden');
+
+                const prefix = isAwakened ? "覚醒・" : "";
+
+                if (skill.name === '必殺の一撃') await playCutin(prefix + '必殺の一撃', 'text-yellow-400');
+                if (skill.name === '手裏剣') await playCutin(prefix + '手裏剣・乱舞', 'text-green-400');
+                if (skill.name === '大地斬') await playCutin(prefix + '奥義・大地斬', 'text-orange-500');
+                if (skill.name === 'シューティングスター') await playCutin(prefix + '流星群', 'text-blue-300');
+
+                log(`${player.name}のスキル：${skill.name}！`, '#55aaff');
+                const boost = isAwakened ? 1.5 : 1.0;
+
+                if (player.name === 'アユム') {
+                    if (roll === 1) {
+                        const isWeak = (enemy.hp <= enemy.maxHp * 0.4);
+                        let dmgValue = isWeak ? 777 : calculateDamage(player.atk, 1.8 * boost, 1).value;
+                        applyDamage(enemy, dmgValue, true, 'enemy', isWeak);
+                        log(`敵に ${dmgValue} ダメージ！`, '#ffff00');
+                        if (isWeak) log(`敵の隙を見逃さない！ 驚異の一撃！！`, '#ffff00');
+                    } else if (roll === 2) { 
+                        chargeTurns = 2; 
+                        log(`力をためた！ 次の攻撃が強力になる！`, '#ffff00');
+                    }
+                    else if (roll === 3) {
+                        let dmg = calculateDamage(player.atk, 1.2 * boost, 1).value + Math.floor(enemy.maxHp * 0.1 * boost);
+                        applyDamage(enemy, dmg, true, 'enemy');
+                        log(`会心の一撃！ ${dmg} ダメージ！`, '#ffff00');
+                    } else if (roll === 4) {
+                        log(`しかし何も起きなかった...`, '#cccccc');
+                    } else if (roll === 5 || roll === 6) {
+                        let dmg = calculateDamage(player.atk, 1 * boost, roll===6 ? 1 : 0.125).value;
+                        applyDamage(enemy, dmg, roll===6, 'enemy');
+                        player.hp = Math.min(player.maxHp, player.hp + dmg);
+                        log(`敵に ${dmg} ダメージ！ 与えた分HPが回復した！`, '#aaffaa');
+                    }
+                } else if (player.name === 'ヒカル') {
+                    if (roll === 1) {
+                        log(`しかし何も起きなかった...`, '#cccccc');
+                    } else if (roll === 2) { 
+                        chargeTurns = 2; 
+                        log(`力をためた！ 次の攻撃が強力になる！`, '#ffff00');
+                    }
+                    else if (roll === 3 || roll === 6) { 
+                        const success = setStatus(enemy, 'poison', 99, 0.8);
+                        if (success) log(`敵を毒状態にした！`, '#ff00ff');
+                        else log(`しかし敵は毒を回避した！`, '#cccccc');
+                    }
+                    else if (roll === 4 || roll === 5) {
+                        const hits = isAwakened ? 8 : 5;
+                        let totalHitsDmg = 0;
+                        for(let i=0; i<hits; i++) {
+                            let dmg = calculateDamage(player.atk, 0.35);
+                            applyDamage(enemy, dmg.value, dmg.isCrit, 'enemy');
+                            totalHitsDmg += dmg.value;
+                            updateUI();
+                            await new Promise(r => setTimeout(r, 200));
+                            if (enemy.hp <= 0) break;
+                        }
+                        log(`連続攻撃！ 合計 ${totalHitsDmg} ダメージ！`, '#00ff00');
+                    }
+                } else if (player.name === 'シュンスケ') {
+                    if (roll === 1) { 
+                        let dmg = calculateDamage(player.atk, 2.5 * boost);
+                        applyDamage(enemy, dmg.value, dmg.isCrit, 'enemy'); 
+                        log(`強力な一撃！ ${dmg.value} ダメージ！`, '#ff8800');
+                    }
+                    else if (roll === 2) { 
+                        chargeTurns = 2; 
+                        log(`不敵に笑い、力をためた！`, '#ffff00');
+                    }
+                    else if (roll === 3) { 
+                        superCharge = true; 
+                        log(`闘気がみなぎる！ 会心率が永続アップ！`, '#ffff00');
+                    }
+                    else if (roll === 4) {
+                        log(`しかし何も起きなかった...`, '#cccccc');
+                    }
+                    else if (roll === 5) { 
+                        let dmg = Math.floor(enemy.hp * (isAwakened ? 0.9 : 0.7)); 
+                        applyDamage(enemy, dmg, false, 'enemy'); 
+                        log(`敵の生命力を削り取った！ ${dmg} ダメージ！`, '#ff0000');
+                    }
+                    else if (roll === 6) { 
+                        let dmg = calculateDamage(player.atk, 1 * boost).value; 
+                        applyDamage(enemy, dmg, false, 'enemy'); 
+                        const success = setStatus(enemy, 'confuse', 99, 0.7);
+                        log(`衝撃で敵に ${dmg} ダメージ！` + (success ? " 混乱させた！" : ""), '#ff8800');
+                    }
+                } else if (player.name === 'ヒイロ') {
+                    if (roll === 1) { 
+                        let dmg = Math.floor(65 * boost); 
+                        applyDamage(enemy, dmg, false, 'enemy'); 
+                        const success = setStatus(enemy, 'confuse', 99, 0.8);
+                        log(`星の破片が降り注ぐ！ ${dmg} ダメージ！` + (success ? " 混乱させた！" : ""), '#aaaaff');
+                    }
+                    else if (roll === 2) { 
+                        player.hp = player.maxHp; 
+                        setStatus(player, 'sleep', isAwakened ? 1 : 2, 1.0); 
+                        log(`深く眠りにつき、HPが全快した。`, '#aaffaa');
+                    }
+                    else if (roll === 3) { 
+                        let avg = Math.floor((player.hp + enemy.hp) / 2); 
+                        player.hp = Math.min(player.maxHp, avg);
+                        enemy.hp = Math.min(enemy.maxHp, avg); 
+                        log(`お互いの生命力が混ざり合う...！`, '#ffffff');
+                    }
+                    else if (roll === 4) { 
+                        let dmg = calculateDamage(player.atk, 4.5 * boost).value; 
+                        applyDamage(enemy, dmg, false, 'enemy'); 
+                        let h = calculateHeal(player.maxHp);
+                        player.hp = Math.min(player.maxHp, player.hp + h); 
+                        log(`極光の矢が貫く！ ${dmg} ダメージ！ ${h} 回復！`, '#ffaaff');
+                    }
+                    else if (roll === 5) { 
+                        // Increase self-damage to 25% of max HP
+                        let selfDmg = Math.floor(player.maxHp * 0.25);
+                        applyDamage(player, selfDmg, false, 'player', true);
+                        log(`魔法が暴走した！ 自分に ${selfDmg} ダメージ！`, '#ff0000');
+                    }
+                    else if (roll === 6) { 
+                        let hpRatio = player.hp / player.maxHp;
+                        let minRange = hpRatio <= 0.1 ? 0.6 : 0.2;
+                        let dmg = Math.floor(enemy.hp * (minRange + Math.random() * 0.4)); 
+                        applyDamage(enemy, dmg, false, 'enemy'); 
+                        setStatus(enemy, 'sleep', 3, 0.9);
+                        log(`流星が敵を襲う！ ${dmg} ダメージ！ さらに深い眠りへ誘った。`, '#8888ff');
+                    }
+                }
             }
 
-            function shake(id) {
-                const el = document.getElementById(id);
-                el.classList.add('shake');
-                setTimeout(() => el.classList.remove('shake'), 500);
+            function createConfetti() {
+                const colors = ['#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff', '#fff'];
+                for(let i=0; i<50; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 4000);
+                }
             }
 
             function showResult(victory) {
                 document.getElementById('battle-screen').classList.add('hidden');
-                document.getElementById('result-screen').classList.remove('hidden');
+                const resultScreen = document.getElementById('result-screen');
+                resultScreen.classList.remove('hidden');
+                
                 const title = document.getElementById('result-title');
                 const msg = document.getElementById('result-message');
                 const next = document.getElementById('next-btn');
                 const restart = document.getElementById('restart-btn');
+                const statsDiv = document.getElementById('adventure-stats');
+                const thanks = document.getElementById('thanks-message');
 
                 if (victory) {
-                    title.innerText = "VICTORY";
-                    msg.innerText = `${enemy.name}を倒した！`;
-                    if (stage >= MONSTERS.length - 1) {
-                        title.innerText = "ALL CLEAR!";
-                        msg.innerText = "世界の平和が守られた！";
-                        next.classList.add('hidden');
+                    createConfetti();
+                    title.innerText = "✨ VICTORY ✨";
+                    msg.innerText = `${enemy.name}を見事に撃破した！`;
+                    
+                    if (stage >= MONSTERS.length - 1 && enemy.hasEvolved) {
+                        // Grand Finale
+                        title.innerText = "🌈 ALL CLEAR 🌈";
+                        msg.innerHTML = `伝説は語り継がれる...<br><span class='text-yellow-500 text-lg font-bold'>世界に平和が訪れた！</span>`;
+                        
+                        // Show Stats
+                        statsDiv.classList.remove('hidden');
+                        document.getElementById('stat-hero').innerText = `${player.name} (${player.job})`;
+                        document.getElementById('stat-dmg-dealt').innerText = gameStats.totalDamageDealt.toLocaleString() + " pt";
+                        document.getElementById('stat-dmg-taken').innerText = gameStats.totalDamageTaken.toLocaleString() + " pt";
+                        document.getElementById('stat-turns').innerText = gameStats.totalTurns + " ターン";
+                        
+                        thanks.classList.remove('hidden');
+                        next.classList.add('hidden'); 
                         restart.classList.remove('hidden');
-                        generateEpicStory(); // Gemini Power!
+                    } else {
+                        statsDiv.classList.add('hidden');
+                        thanks.classList.add('hidden');
+                        next.classList.remove('hidden'); 
+                        restart.classList.add('hidden');
                     }
                 } else {
                     title.innerText = "GAME OVER";
-                    msg.innerText = "冒険はここで終わった...";
-                    next.classList.add('hidden');
+                    msg.innerText = `${player.name}は膝をついた...`;
+                    statsDiv.classList.add('hidden');
+                    thanks.classList.add('hidden');
+                    next.classList.add('hidden'); 
                     restart.classList.remove('hidden');
                 }
             }
@@ -411,18 +851,8 @@
                 document.getElementById('result-screen').classList.add('hidden');
                 document.getElementById('battle-screen').classList.remove('hidden');
                 initStage();
+                isProcessing = false;
             };
-
-            function createConfetti() {
-                for(let i=0; i<30; i++) {
-                    const c = document.createElement('div');
-                    c.className = 'confetti';
-                    c.style.left = Math.random() * 100 + 'vw';
-                    c.style.backgroundColor = `hsl(${Math.random()*360}, 100%, 50%)`;
-                    c.style.animationDuration = (Math.random() * 2 + 1) + 's';
-                    document.body.appendChild(c);
-                }
-            }
         })();
     </script>
 </body>

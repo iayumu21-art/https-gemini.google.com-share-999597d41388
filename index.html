@@ -566,29 +566,27 @@
                 if (enemy.hp > 0) {
                     const enemyCanAct = checkStatusBeforeTurn(enemy);
                     if (!enemyCanAct.sleep && (!enemyCanAct.confuse || Math.random() >= 0.5)) {
-                        // アルティメットドラゴンの「地獄の業火」判定
+                        
+                        // --- ENEMY ATTACK LOGIC ---
                         const isBoss = enemy.name === 'アルティメットドラゴン';
-                        const useHellFire = isBoss && Math.random() < 0.10; // 10%の確率
-
-                        if (useHellFire) {
+                        // 10% chance for Hell Fire if Ultimate Dragon
+                        if (isBoss && Math.random() < 0.10) {
                             playSE('cutin');
-                            await playCutin('地獄の業火', 'text-red-600');
+                            await playCutin('地獄の業火', 'text-red-500');
                             playSE('dark_roar');
                             
-                            // 通常の1.5倍の威力
+                            // 1.5x Power
                             let eDmg = Math.floor(enemy.atk * 1.5 * (0.9 + Math.random() * 0.4));
                             const avoided = applyDamage(player, eDmg, true, 'player');
-                            
                             if (avoided) {
                                 log(`${enemy.name}の地獄の業火をかわした！`, '#00ffff');
                             } else {
                                 log(`${enemy.name}の地獄の業火！ ${eDmg}のダメージ！`, '#ff0000');
-                                // 与えたダメージ分回復
+                                // Heal by damage amount
                                 enemy.hp = Math.min(enemy.maxHp, enemy.hp + eDmg);
-                                log(`${enemy.name}は地獄の業火で${eDmg}の体力を吸収した！`, '#aaffaa');
+                                log(`${enemy.name}は地獄の業火で${eDmg}回復した！`, '#aaffaa');
                             }
                         } else {
-                            // 通常攻撃
                             const isCrit = Math.random() < 0.10;
                             if (isCrit) playSE('bad_hit'); else playSE('hit');
                             let eDmg = Math.floor(enemy.atk * (0.9 + Math.random() * 0.4));
@@ -648,7 +646,6 @@
 
             function applyPoison(unit) {
                 if (unit.status.some(s => s.type === 'poison')) {
-                    // アルティメットドラゴンは毒耐性が高く、ダメージを10分の1(最大HPの1%)に軽減
                     const isBoss = unit.name === 'アルティメットドラゴン';
                     const dmgRatio = isBoss ? 0.01 : 0.1;
                     const dmg = Math.floor(unit.maxHp * dmgRatio);
